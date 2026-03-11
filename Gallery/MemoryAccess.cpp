@@ -8,7 +8,8 @@
 
 void MemoryAccess::printAlbums() 
 {
-	if(m_albums.empty()) {
+	if(m_albums.empty())
+	{
 		throw MyException("There are no existing albums.");
 	}
 	std::cout << "Album list:" << std::endl;
@@ -57,7 +58,8 @@ Album MemoryAccess::createDummyAlbum(const User& user)
 
 	Album album(user.getId(),name.str());
 
-	for (int i=1; i<3; ++i)	{
+	for (int i=1; i<3; ++i)
+	{
 		std::stringstream picName("Picture_" + std::to_string(i));
 
 		Picture pic(i++, picName.str());

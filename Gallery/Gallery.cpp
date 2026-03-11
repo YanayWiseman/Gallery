@@ -13,11 +13,13 @@ int getCommandNumberFromUser()
 	std::string input;
 	std::getline(std::cin, input);
 	
-	while (std::cin.fail() || std::cin.eof() || input.find_first_not_of(numericStr) != std::string::npos) {
+	while (std::cin.fail() || std::cin.eof() || input.find_first_not_of(numericStr) != std::string::npos)
+	{
 
 		std::cout << "Please enter a number only!" << std::endl;
 
-		if (input.find_first_not_of(numericStr) == std::string::npos) {
+		if (input.find_first_not_of(numericStr) == std::string::npos)
+		{
 			std::cin.clear();
 		}
 
@@ -42,12 +44,16 @@ int main(void)
 	std::cout << "===================" << std::endl;
 	std::cout << "Type " << HELP << " to a list of all supported commands" << std::endl;
 	
-	do {
+	do
+	{
 		int commandNumber = getCommandNumberFromUser();
 		
-		try	{
+		try
+		{
 			albumManager.executeCommand(static_cast<CommandType>(commandNumber));
-		} catch (std::exception& e) {	
+		} 
+		catch (std::exception& e)
+		{	
 			std::cout << e.what() << std::endl;
 		}
 	} 
