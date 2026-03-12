@@ -351,16 +351,18 @@ void AlbumManager::userStatistics()
 {
 	std::string userIdStr = getInputFromConsole("Enter user id: ");
 	int userId = std::stoi(userIdStr);
-	if ( !m_dataAccess.doesUserExists(userId) ) {
+	if ( !m_dataAccess.doesUserExists(userId) )
+	{
 		throw MyException("Error: There is no user with id @" + userIdStr + "\n");
 	}
 
 	const User& user = m_dataAccess.getUser(userId);
 
 	std::cout << "user @" << userId << " Statistics:" << std::endl << "--------------------" << std::endl <<
+		"  + Count of Owned Albums: " << m_dataAccess.countAlbumsOwnedOfUser(user) << std::endl <<
 		"  + Count of Albums Tagged: " << m_dataAccess.countAlbumsTaggedOfUser(user) << std::endl <<
 		"  + Count of Tags: " << m_dataAccess.countTagsOfUser(user) << std::endl <<
-		"  + Avarage Tags per Alboum: " << m_dataAccess.averageTagsPerAlbumOfUser(user) << std::endl;
+		"  + Avarage Tags per Album: " << m_dataAccess.averageTagsPerAlbumOfUser(user) << std::endl;
 }
 
 
