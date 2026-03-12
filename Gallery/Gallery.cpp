@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <sstream>
 #include "MemoryAccess.h"
 #include "AlbumManager.h"
 
@@ -30,6 +31,24 @@ int getCommandNumberFromUser()
 	return std::atoi(input.c_str());
 }
 
+/*
+	function to print the system's information suck as main developer and current time and hour
+	input: no input values
+	output: no return values
+*/
+
+void printSystemInfo()
+{
+	std::cout << "Developer: Yanay Wiseman\nCurrent date:" << std::endl;
+
+	time_t now = time(nullptr);
+	std::stringstream oss;
+	oss << std::put_time(localtime(&now), "%d/%m/%Y %H:%M:%S");
+	std::cout << oss.str() << std::endl;
+
+	std::cout << "=========================\n" << std::endl;
+}
+
 int main(void)
 {
 	// initialization data access
@@ -38,10 +57,12 @@ int main(void)
 	// initialize album manager
 	AlbumManager albumManager(dataAccess);
 
-
 	std::string albumName;
 	std::cout << "Welcome to Gallery!" << std::endl;
-	std::cout << "===================" << std::endl;
+	std::cout << "\n=========================" << std::endl;
+
+	printSystemInfo();
+
 	std::cout << "Type " << HELP << " to a list of all supported commands" << std::endl;
 	
 	do
