@@ -186,7 +186,6 @@ void MemoryAccess::createUser(User& user)
 void MemoryAccess::deleteUser(const User& user)
 {
 	int userId = user.getId();
-
 	if (doesUserExists(userId))
 	{
 		// delete the user
@@ -194,22 +193,36 @@ void MemoryAccess::deleteUser(const User& user)
 		{
 			if (*iter == user)
 			{
+				cleanUserData(user);
 				iter = m_users.erase(iter);
 
-				// delete the user's albums
-				for (auto album = this->m_albums.begin(); album != this->m_albums.end();)
-				{
-					if (album->getOwnerId() == userId)
-					{
-						album = m_albums.erase(album);
-					}
-					else
-					{
-						album++;
-					}
-				}
 				return;
 			}
+		}
+	}
+}
+
+/*
+	Helper function used to clean the given's user data and keep the encapsulation principle in deleteUser()
+	input: the user
+	output: no return values
+*/
+
+void MemoryAccess::cleanUserData(const User& userId)
+{
+	int id = userId.getId();
+	// delete the user's albums
+	for (auto album = this->m_albums.begin(); album != m_albums.end(); )
+	{
+		// remove tags of this user from pictures he is tagged in
+		album->untagUserInAlbum(id);
+		if (album->getOwnerId() == id)
+		{
+			album = m_albums.erase(album);
+		}
+		else
+		{
+			album++;
 		}
 	}
 }
