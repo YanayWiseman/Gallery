@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <sstream>
 #include "MemoryAccess.h"
 #include "AlbumManager.h"
 
@@ -42,6 +43,15 @@ int main(void)
 	std::string albumName;
 	std::cout << "Welcome to Gallery!" << std::endl;
 	std::cout << "===================" << std::endl;
+
+	// system information
+	std::cout << "Developer: Yanay Wiseman, Current date:" << std::endl;
+	time_t now = time(nullptr);
+	std::stringstream oss;
+	oss << std::put_time(localtime(&now), "%d/%m/%Y %H:%M:%S");
+	std::cout << oss.str() << std::endl;
+	std::cout << "===================" << std::endl;
+
 	std::cout << "Type " << HELP << " to a list of all supported commands" << std::endl;
 	
 	do
