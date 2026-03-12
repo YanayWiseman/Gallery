@@ -12,9 +12,11 @@ void MemoryAccess::printAlbums()
 	{
 		throw MyException("There are no existing albums.");
 	}
+
 	std::cout << "Album list:" << std::endl;
 	std::cout << "-----------" << std::endl;
-	for (const Album& album: m_albums) 	{
+	for (const Album& album: m_albums)
+	{
 		std::cout << std::setw(5) << "* " << album;
 	}
 }
