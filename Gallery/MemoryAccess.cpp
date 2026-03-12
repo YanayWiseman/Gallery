@@ -8,12 +8,15 @@
 
 void MemoryAccess::printAlbums() 
 {
-	if(m_albums.empty()) {
+	if(m_albums.empty())
+	{
 		throw MyException("There are no existing albums.");
 	}
+
 	std::cout << "Album list:" << std::endl;
 	std::cout << "-----------" << std::endl;
-	for (const Album& album: m_albums) 	{
+	for (const Album& album: m_albums)
+	{
 		std::cout << std::setw(5) << "* " << album;
 	}
 }
@@ -57,7 +60,8 @@ Album MemoryAccess::createDummyAlbum(const User& user)
 
 	Album album(user.getId(),name.str());
 
-	for (int i=1; i<3; ++i)	{
+	for (int i=1; i<3; ++i)
+	{
 		std::stringstream picName("Picture_" + std::to_string(i));
 
 		Picture pic(i++, picName.str());
@@ -181,13 +185,44 @@ void MemoryAccess::createUser(User& user)
 
 void MemoryAccess::deleteUser(const User& user)
 {
-	if (doesUserExists(user.getId())) {
-	
-		for (auto iter = m_users.begin(); iter != m_users.end(); ++iter) {
-			if (*iter == user) {
+	int userId = user.getId();
+	if (doesUserExists(userId))
+	{
+		// delete the user
+		for (auto iter = m_users.begin(); iter != m_users.end(); ++iter)
+		{
+			if (*iter == user)
+			{
+				cleanUserData(user);
 				iter = m_users.erase(iter);
+
 				return;
 			}
+		}
+	}
+}
+
+/*
+	Helper function used to clean the given's user data and keep the encapsulation principle in deleteUser()
+	input: the user
+	output: no return values
+*/
+
+void MemoryAccess::cleanUserData(const User& userId)
+{
+	int id = userId.getId();
+	// delete the user's albums
+	for (auto album = this->m_albums.begin(); album != m_albums.end(); )
+	{
+		// remove tags of this user from pictures he is tagged in
+		album->untagUserInAlbum(id);
+		if (album->getOwnerId() == id)
+		{
+			album = m_albums.erase(album);
+		}
+		else
+		{
+			album++;
 		}
 	}
 }

@@ -37,12 +37,14 @@ enum CommandType
 	EXIT = 99
 };
 
-struct CommandPrompt {
+struct CommandPrompt
+{
 	CommandType type;
 	const std::string prompt;
 };
 
-struct CommandGroup {
+struct CommandGroup
+{
 	const std::string title;
 	const std::vector<struct CommandPrompt> commands;
 };
