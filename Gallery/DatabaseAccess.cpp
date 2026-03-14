@@ -45,7 +45,12 @@ bool DatabaseAccess::open()
 
 void DatabaseAccess::close()
 {
-
+	// if the database is open
+	if (this->m_db != nullptr)
+	{
+		sqlite3_close(this->m_db);
+		this->m_db = nullptr;
+	}
 }
 void DatabaseAccess::clear()
 {
