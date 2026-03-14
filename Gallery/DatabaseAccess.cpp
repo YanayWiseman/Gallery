@@ -67,6 +67,7 @@ void DatabaseAccess::close()
 
 void DatabaseAccess::clear()
 {
+	// the order here matters because of the foreign keys
 	const char* statement = "DELETE FROM TAGS; DELETE FROM PICTURES; DELETE FROM ALBUMS; DELETE FROM USERS;";
 	char* errorMsg = nullptr;
 

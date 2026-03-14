@@ -3,6 +3,7 @@
 #include <sstream>
 #include "MemoryAccess.h"
 #include "AlbumManager.h"
+#include "DatabaseAccess.h"
 
 
 int getCommandNumberFromUser()
@@ -53,6 +54,11 @@ int main(void)
 {
 	// initialization data access
 	MemoryAccess dataAccess;
+
+	// still can't craete an instance of DatabaseAccess because 
+	// I still have'nt implemented all of IDataAccess's pure methods
+	//DatabaseAccess dataAccess;
+	//dataAccess.open();
 
 	// initialize album manager
 	AlbumManager albumManager(dataAccess);
