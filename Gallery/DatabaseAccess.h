@@ -6,20 +6,29 @@
 #include "IDataAccess.h"
 #include "sqlite3.h"
 
+#define DATABASE_NAME "YanayGallery.sqlite"
+
 class DatabaseAccess : public IDataAccess
 {
 private:
-	// fields
+	// Fields
 	sqlite3* m_db;
 	std::string m_dbFile;
+
 	std::list<User> m_users;
 	std::list<Album> m_albums;
 	std::list<Picture> m_pictures;
 
+	bool executeSqlQuery(const std::string& statement) const;
+
 public:
+	// Methods
+	
+	// Constructor and Destructor
 	DatabaseAccess();
 	virtual ~DatabaseAccess();
 
+	// databse related
 	bool open() override;
 	void close() override;
 	void clear() override;

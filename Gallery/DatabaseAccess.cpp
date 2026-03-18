@@ -9,7 +9,7 @@
 DatabaseAccess::DatabaseAccess()
 {
 	this->m_db = nullptr;
-	this->m_dbFile = "YanayGallery.sqlite";  // file name of the database
+	this->m_dbFile = DATABASE_NAME;  // file name of the database
 }
 
 /*
@@ -78,9 +78,17 @@ void DatabaseAccess::clear()
 	output: no return values
 */
 
-void tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
+void DatabaseAccess::tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
 {
+	// we got the album's name, the picture's name and the user's id
+	// to insert into the tags table we need the picture's id and the user id (which we already got)
 
+	// we need to make an sql query to get the picture's id using the picture's name and its album's name
+	// and integrate it into an INSERT query
+	std::string getPictureId = "(SELECT PICTURES.id FROM PICTURES INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id WHERE PICTURES.name = '" + pictureName + "' AND ALBUMS.name = '" + albumName + "')";
+	std::string tagUserInPicture = "INSERT INTO TAGS (picture_id, user_id) VALUES (" + getPictureId + ", " + std::to_string(userId) + ");";
+	
+	executeSqlQuery(tagUserInPicture);
 }
 
 /*
@@ -89,9 +97,15 @@ void tagUserInPicture(const std::string& albumName, const std::string& pictureNa
 	output: no return values
 */
 
-void untagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
+void DatabaseAccess::untagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
 {
+	// here too, we nede the picture id by the album name and picture's name.
+	std::string getPictureId = "(SELECT PICTURES.id FROM PICTURES INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id WHERE PICTURES.name = '" + pictureName + "' AND ALBUMS.name = '" + albumName + "')";
+	
+	// but now we want to remove it
+	std::string unTagUser = "DELETE FROM TAGS WHERE TAGS.picture_id = " + getPictureId + " AND TAGS.user_id = " + std::to_string(userId) + ";";
 
+	executeSqlQuery(unTagUser);
 }
 
 /*
@@ -100,7 +114,7 @@ void untagUserInPicture(const std::string& albumName, const std::string& picture
 	output: no return values
 */
 
-void createUser(User& user)
+void DatabaseAccess::createUser(User& user)
 {
 
 }
@@ -111,7 +125,34 @@ void createUser(User& user)
 	output: no return values
 */
 
-void deleteUser(const User& user)
+void DatabaseAccess::deleteUser(const User& user)
 {
 
+}
+
+/*
+	Helper method to exectue a given sql query statement to avoid code duplication and implement the encapsulation pricple
+	input: the sql statement as a string
+	output: true if statement succeeded and false otherwise (according to SQLITE_OK)
+*/
+
+bool DatabaseAccess::executeSqlQuery(const std::string& statement) const
+{
+	char* errorMsg = nullptr;
+
+	int res = sqlite3_exec(this->m_db, statement.c_str(), nullptr, nullptr, &errorMsg);
+	if (res != SQLITE_OK)
+	{
+		std::cout << "Error:" << errorMsg << std::endl;
+
+		// if sqlite3 used errorMsg we need to free the memory using their functions
+		if (errorMsg)
+		{
+			sqlite3_free(errorMsg);
+		}
+		return false;
+	}
+	
+	std::cout << statement << std::endl;   // for debugging purposes
+	return true;
 }
