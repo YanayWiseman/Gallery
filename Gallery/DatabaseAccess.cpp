@@ -71,3 +71,47 @@ void DatabaseAccess::clear()
 	this->m_albums.clear();
 	this->m_pictures.clear();
 }
+
+/*
+	Method to tag a user in a picture
+	input: the album name and picture name to tag to and the userId  to tag
+	output: no return values
+*/
+
+void tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
+{
+
+}
+
+/*
+	Method to untag a user from a picture
+	input: the album name and picture name to untag from and the userId to untag
+	output: no return values
+*/
+
+void untagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
+{
+
+}
+
+/*
+	Method to create a user given a user object
+	input: the user object to add (contains name and id)
+	output: no return values
+*/
+
+void createUser(User& user)
+{
+
+}
+
+/*
+	Method to delete a user given a user object
+	input: the user object to remove
+	output: no return values
+*/
+
+void deleteUser(const User& user)
+{
+
+}

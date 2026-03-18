@@ -37,13 +37,13 @@ public:
 	//// picture related
 	//void addPictureToAlbumByName(const std::string& albumName, const Picture& picture) override;
 	//void removePictureFromAlbumByName(const std::string& albumName, const std::string& pictureName) override;
-	//void tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId) override;
-	//void untagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId) override;
+	void tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId) override;
+	void untagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId) override;
 
 	//// user related
 	//void printUsers() override;
-	//void createUser(User& user) override;
-	//void deleteUser(const User& user) override;
+	void createUser(User& user) override;
+	void deleteUser(const User& user) override;
 	//bool doesUserExists(int userId) override;
 	//User getUser(int userId) override;
 
