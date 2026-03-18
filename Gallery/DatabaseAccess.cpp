@@ -60,22 +60,14 @@ void DatabaseAccess::close()
 }
 
 /*
-	Method to clear all of the data from the database (free allocated memory)
+	Method to clear all of the data from the database object (free allocated memory)
 	input: no input values
 	output: no return values
 */
 
 void DatabaseAccess::clear()
 {
-	// the order here matters because of the foreign keys
-	const char* statement = "DELETE FROM TAGS; DELETE FROM PICTURES; DELETE FROM ALBUMS; DELETE FROM USERS;";
-	char* errorMsg = nullptr;
-
-	int res = sqlite3_exec(this->m_db, statement, nullptr, nullptr, &errorMsg);
-
-	if (errorMsg)
-	{
-		// free memory the sqlite3 allocated using its function and not delete
-		sqlite3_free(errorMsg);
-	}
+	this->m_users.clear();
+	this->m_albums.clear();
+	this->m_pictures.clear();
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include "Album.h"
 #include "User.h"
 #include "IDataAccess.h"
@@ -11,6 +12,9 @@ private:
 	// fields
 	sqlite3* m_db;
 	std::string m_dbFile;
+	std::list<User> m_users;
+	std::list<Album> m_albums;
+	std::list<Picture> m_pictures;
 
 public:
 	DatabaseAccess();
