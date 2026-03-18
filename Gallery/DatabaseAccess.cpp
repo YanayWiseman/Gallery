@@ -88,7 +88,11 @@ void DatabaseAccess::tagUserInPicture(const std::string& albumName, const std::s
 	std::string getPictureId = "(SELECT PICTURES.id FROM PICTURES INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id WHERE PICTURES.name = '" + pictureName + "' AND ALBUMS.name = '" + albumName + "')";
 	std::string tagUserInPicture = "INSERT INTO TAGS (picture_id, user_id) VALUES (" + getPictureId + ", " + std::to_string(userId) + ");";
 	
-	executeSqlQuery(tagUserInPicture);
+	bool executed = executeSqlQuery(tagUserInPicture);
+	if (!executed)
+	{
+		std::cout << "Tagging user in picture failed!" << std::endl;
+	}
 }
 
 /*
@@ -105,7 +109,11 @@ void DatabaseAccess::untagUserInPicture(const std::string& albumName, const std:
 	// but now we want to remove it
 	std::string unTagUser = "DELETE FROM TAGS WHERE TAGS.picture_id = " + getPictureId + " AND TAGS.user_id = " + std::to_string(userId) + ";";
 
-	executeSqlQuery(unTagUser);
+	bool executed = executeSqlQuery(unTagUser);
+	if (!executed)
+	{
+		std::cout << "Untagging user in picture failed!" << std::endl;
+	}
 }
 
 /*
@@ -116,7 +124,15 @@ void DatabaseAccess::untagUserInPicture(const std::string& albumName, const std:
 
 void DatabaseAccess::createUser(User& user)
 {
-
+	// we need to create an insert statement that creates a user into users with
+	// the given user's name and id even though id might be autoincremented
+	std::string addUser = "INSERT INTO USER (id, name) VALUES (" + user.getId() + ", '" + user.getName() + "';";
+	
+	bool executed = executeSqlQuery(addUser);
+	if (!executed)
+	{
+		std::cout << "Creating user failed!" << std::endl;
+	}
 }
 
 /*
