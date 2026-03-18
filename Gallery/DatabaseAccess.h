@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include <vector>
 #include "Album.h"
 #include "User.h"
 #include "IDataAccess.h"

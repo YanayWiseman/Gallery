@@ -143,7 +143,58 @@ void DatabaseAccess::createUser(User& user)
 
 void DatabaseAccess::deleteUser(const User& user)
 {
+	// deleting a user is more then just deleting the user from USERS
+	// we need to take care of the foreign keys in the rest of the tables
+	// that the user has records in
+	// we need to start from TAGS then go to pictures -> albums and finally users
+	// "counter clockwise" or in the opposite direction of the primary keys
 
+	std::string userId = std::to_string(user.getId());
+
+	// all or nothing
+	executeSqlQuery("BEGIN TRANSACTION;");
+
+	// delete from tags
+	std::string deleteFromTags = "DELETE FROM TAGS WHERE user_id = " + user.getId() + ";";
+
+	// delete from pictures, this is a complicated query because we need to create another query in order
+	// to get the albums of the user
+	// also, since the SELECT query might return a list, we use the IN clause for an iterative deletion
+	std::string deleteFromPictures = "DELETE FROM PICTURES WHERE album_id IN (SELECT id FROM ALBUMS WHERE user_id = " + user.getId() + ");";
+
+	// delete from albums
+	std::string deleteFromAlbums = "DELETE FROM ALBUMS WHERE user_id = " + user.getId() + ";";
+
+	// finally delete from users
+	std::string deleteFromUsers = "DELETE FROM USERS WHERE id = " +user.getId() + ";";
+
+	// execute deletion in order using a vector
+	std::vector<std::string> queries = { deleteFromTags, deleteFromPictures, deleteFromAlbums, deleteFromUsers };
+	bool executed = true;
+
+	// loop through the vector
+	for (const auto& currQuery = queries.begin(); currQuery != queries.end(); currQuery++)
+	{
+		// if even one of them fail, retrieve
+		if (!executeSqlQuery(currQuery))
+		{
+			executed = false;
+			break;
+		}
+	}
+
+	// if everything worked perfectly
+	if (executed)
+	{
+		// save and close transaction
+		executeSqlQuery("COMMIT;");
+	}
+	else
+	{
+		// go back
+		executeSqlQuery("ROLLBACK;");
+		std::cout << "Delete User failed!" << std::endl;
+	}
 }
 
 /*
