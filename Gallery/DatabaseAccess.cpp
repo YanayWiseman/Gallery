@@ -1,5 +1,7 @@
 #include "DatabaseAccess.h"
 
+// PART 1
+
 /*
 	Constructor for the DatabaseAccess class, to contsruct the object
 	input: no input values
@@ -71,6 +73,8 @@ void DatabaseAccess::clear()
 	this->m_albums.clear();
 	this->m_pictures.clear();
 }
+
+// PART 2
 
 /*
 	Method to tag a user in a picture
@@ -222,4 +226,191 @@ bool DatabaseAccess::executeSqlQuery(const std::string& statement) const
 	
 	std::cout << statement << std::endl;   // for debugging purposes
 	return true;
+}
+
+// PART 3
+
+// albums related
+
+/*
+
+*/
+
+const std::list<Album> DatabaseAccess::getAlbums()
+{
+
+}
+
+/*
+
+*/
+
+const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
+{
+
+}
+
+/*
+
+*/
+
+void DatabaseAccess::createAlbum(const Album& album)
+{
+
+}
+
+/*
+
+*/
+
+void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
+{
+
+}
+
+/*
+
+*/
+
+bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
+{
+
+}
+
+/*
+
+*/
+
+Album DatabaseAccess::openAlbum(const std::string& albumName)
+{
+
+}
+
+/*
+
+*/
+
+void DatabaseAccess::closeAlbum(Album& pAlbum)
+{
+
+}
+
+/*
+
+*/
+
+void DatabaseAccess::printAlbums()
+{
+
+}
+
+// picture related
+
+/*
+
+*/
+
+void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const Picture& picture)
+{
+
+}
+
+/*
+
+*/
+
+void DatabaseAccess::removePictureFromAlbumByName(const std::string& albumName, const std::string& pictureName)
+{
+
+}
+
+// users related
+
+/*
+
+*/
+
+void DatabaseAccess::printUsers()
+{
+
+}
+User DatabaseAccess::getUser(int userId)
+{
+
+}
+
+/*
+
+*/
+
+bool DatabaseAccess::doesUserExists(int userId)
+{
+
+}
+
+// statistics
+
+/*
+
+*/
+
+int DatabaseAccess::countAlbumsOwnedOfUser(const User& user)
+{
+
+}
+
+/*
+
+*/
+
+int DatabaseAccess::countAlbumsTaggedOfUser(const User& user)
+{
+
+}
+
+/*
+
+*/
+
+int DatabaseAccess::countTagsOfUser(const User& user)
+{
+
+}
+
+/*
+
+*/
+
+float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
+{
+
+}
+
+// queries
+
+/*
+
+*/
+
+User DatabaseAccess::getTopTaggedUser()
+{
+
+}
+
+/*
+
+*/
+
+Picture DatabaseAccess::getTopTaggedPicture()
+{
+
+}
+
+/*
+
+*/
+
+std::list<Picture> DatabaseAccess::getTaggedPicturesOfUser(const User& user)
+{
+
 }
