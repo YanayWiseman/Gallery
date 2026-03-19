@@ -130,7 +130,7 @@ void DatabaseAccess::createUser(User& user)
 {
 	// we need to create an insert statement that creates a user into users with
 	// the given user's name and id even though id might be autoincremented
-	std::string addUser = "INSERT INTO USER (id, name) VALUES (" + user.getId() + ", '" + user.getName() + "';";
+	std::string addUser = "INSERT INTO USER (id, name) VALUES (" + std::string(user.getId()) + ", '" + std::string(user.getName()) + "');";
 	
 	bool executed = executeSqlQuery(addUser);
 	if (!executed)
@@ -159,25 +159,25 @@ void DatabaseAccess::deleteUser(const User& user)
 	executeSqlQuery("BEGIN TRANSACTION;");
 
 	// delete from tags
-	std::string deleteFromTags = "DELETE FROM TAGS WHERE user_id = " + user.getId() + ";";
+	std::string deleteFromTags = "DELETE FROM TAGS WHERE user_id = " + std::string(user.getId()) + ";";
 
 	// delete from pictures, this is a complicated query because we need to create another query in order
 	// to get the albums of the user
 	// also, since the SELECT query might return a list, we use the IN clause for an iterative deletion
-	std::string deleteFromPictures = "DELETE FROM PICTURES WHERE album_id IN (SELECT id FROM ALBUMS WHERE user_id = " + user.getId() + ");";
+	std::string deleteFromPictures = "DELETE FROM PICTURES WHERE album_id IN (SELECT id FROM ALBUMS WHERE user_id = " + std::string(user.getId()) + ");";
 
 	// delete from albums
-	std::string deleteFromAlbums = "DELETE FROM ALBUMS WHERE user_id = " + user.getId() + ";";
+	std::string deleteFromAlbums = "DELETE FROM ALBUMS WHERE user_id = " + std::string(user.getId()) + ";";
 
 	// finally delete from users
-	std::string deleteFromUsers = "DELETE FROM USERS WHERE id = " +user.getId() + ";";
+	std::string deleteFromUsers = "DELETE FROM USERS WHERE id = " +std::string(user.getId()) + ";";
 
 	// execute deletion in order using a vector
 	std::vector<std::string> queries = { deleteFromTags, deleteFromPictures, deleteFromAlbums, deleteFromUsers };
 	bool executed = true;
 
 	// loop through the vector
-	for (const auto& currQuery = queries.begin(); currQuery != queries.end(); currQuery++)
+	for (const auto& query : queries)
 	{
 		// if even one of them fail, retrieve
 		if (!executeSqlQuery(currQuery))
@@ -233,12 +233,52 @@ bool DatabaseAccess::executeSqlQuery(const std::string& statement) const
 // albums related
 
 /*
-
+	Method to get the list of all of the albums
+	input: no input values
+	output: the list of albums
 */
 
 const std::list<Album> DatabaseAccess::getAlbums()
 {
+	// clear the map if anything is left in there
+	// we want to fill it from the beggining and not have any left overs
+	this->m_albums.clear();
 
+	// we are going to be using prepared statements, this is what will contain the result of out query
+	// and we will be using sqlite3_step() in oreder to take out a one record at once
+	sqlite3_stmt* stmt = nullptr;
+
+	// prepare the statement
+	int res = sqlite3_prepare_v2(this->m_db, "SELECT id, name, creation_date FROM ALBUMS;", -1, &stmt, nullptr);
+	
+	// check for failure
+	if (res != SQLITE_OK)
+	{
+		std::cout << "Error: " << sqlite3_errmsg(this->m_db);
+		return {};  // return an empty list
+	}
+
+	// iterate through the records returned
+	while (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		// we are going to be using a helper function to extract the album
+		Album album = albumFromRow(stmt);
+
+		// insert into the data
+		this->m_albums[album.getName()] = album;
+	}
+
+	// finish the statement
+	sqlite3_finalize(stmt);
+
+	// we are returning a list, not a map so lets convert
+	std::list<Album> albumsResult;
+	for (const auth& pair : this->m_albums)
+	{
+		albumsResult.push_back(pair.second);
+	}
+
+	return albumsResult;
 }
 
 /*

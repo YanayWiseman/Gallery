@@ -2,6 +2,7 @@
 
 #include <list>
 #include <vector>
+#include <unordered_map>
 #include "Album.h"
 #include "User.h"
 #include "IDataAccess.h"
@@ -16,8 +17,14 @@ private:
 	sqlite3* m_db;
 	std::string m_dbFile;
 
-	std::list<User> m_users;
-	std::list<Album> m_albums;
+	// m_users is almost always accesed by user id so using a map should make this more efficient
+	std::unordered_map<int, User> m_users;    // key is user id
+
+	// m_albums is almost always accessed by album name so using a map should make this more efficient
+	std::unordered_map<std::string, Album> m_albums;   // key is album name
+	
+	// m_pictures is never looked up individualy, a list is the right call for this case
+	// a map would make the code awkward
 	std::list<Picture> m_pictures;
 
 	bool executeSqlQuery(const std::string& statement) const;
