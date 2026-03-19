@@ -28,6 +28,8 @@ private:
 	std::list<Picture> m_pictures;
 
 	bool executeSqlQuery(const std::string& statement) const;
+	//static const Album& albumFromRow(sqlite3_stmt* stmt);
+	static const std::string& colText(sqlite3_stmt* stmt, int col);
 
 public:
 	// Methods

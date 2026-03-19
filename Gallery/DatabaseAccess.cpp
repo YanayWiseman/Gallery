@@ -249,7 +249,7 @@ const std::list<Album> DatabaseAccess::getAlbums()
 	sqlite3_stmt* stmt = nullptr;
 
 	// prepare the statement
-	int res = sqlite3_prepare_v2(this->m_db, "SELECT id, name, creation_date FROM ALBUMS;", -1, &stmt, nullptr);
+	int res = sqlite3_prepare_v2(this->m_db, "SELECT ALBUMS.id, ALBUMS.name, ALBUMS.creation_date, ALBUMS.user_id, USERS.name FROM ALBUMS INNER JOIN USERS ON ALBUMS.user_id = USERS.id;", -1, &stmt, nullptr);
 	
 	// check for failure
 	if (res != SQLITE_OK)
@@ -261,11 +261,26 @@ const std::list<Album> DatabaseAccess::getAlbums()
 	// iterate through the records returned
 	while (sqlite3_step(stmt) == SQLITE_ROW)
 	{
-		// we are going to be using a helper function to extract the album
-		Album album = albumFromRow(stmt);
+		// quick explanation about how i am extracting the records here
+		// the columnsa re sorted by 0 based index in the oreder i ahve selected in
+		// the SELECT quert above, the second paramerter of the sqlite3_column_sometype() is the index
+
+		// here we are getting the album id
+		int id = sqlite3_column_int(stmt, 0);
+	
+		// sqlite3_column_text() returns a const unsigned char* so we need
+		// to convert in oreder to create an album instance
+		std::string albumName = colText(stmt, 1);
+		std::string creationDate = colText(stmt, 2);
+		int ownerId = sqlite3_column_int(stmt, 3);
+		std::string ownerName = colText(stmt, 4);  // from USERS (name)
+
+		Album album(ownerId, albumName);
+		album.setCreationDate(creationDate);
 
 		// insert into the data
-		this->m_albums[album.getName()] = album;
+		this->m_albums[albumName] = album;
+		std::cout << std::setw(5) << "* " << album;
 	}
 
 	// finish the statement
@@ -279,6 +294,44 @@ const std::list<Album> DatabaseAccess::getAlbums()
 	}
 
 	return albumsResult;
+}
+
+///*
+//	Helper static method to extract one record from a given sqlite3_stmt
+//	input: the sqlite statement
+//	output: the album
+//*/
+//
+//static const Album& DatabaseAccess::albumFromRow(sqlite3_stmt* stmt)
+//{
+//	// teh columns are oriented in the order we have selected in the query
+//
+//	int id = sqlite3_column_int(stmt, 0);
+//	
+//}
+
+/*
+	Helper static method to convert the const unsigned char* that sqlite3_colums_text() returns
+	input: the statement and the column to convert
+	output: the converted string
+*/
+
+static const std::string& DatabaseAccess::colText(sqlite3_stmt* stmt, int col)
+{
+	// extract it from the records
+	const unsigned char* text = sqlite3_column_text(stmt, col);
+
+	if (text)
+	{
+		// first of all, sqlite3_column_bytes returns the number of bytes in the text column
+		// and this string constructor copies the first text + sqlite3_column_bytes(stmt, col)
+		// from into the text "array"
+		return std::string(text, text + sqlite3_column_bytes(stmt, col));
+	}
+	else
+	{
+		return std::string();
+	}
 }
 
 /*
