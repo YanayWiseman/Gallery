@@ -28,8 +28,9 @@ private:
 	std::list<Picture> m_pictures;
 
 	bool executeSqlQuery(const std::string& statement) const;
-	//static const Album& albumFromRow(sqlite3_stmt* stmt);
 	static const std::string& colText(sqlite3_stmt* stmt, int col);
+	sqlite3_stmt* prepare(const char* statement) const;
+	void deleteAlbumBind(sqlite3_stmt* stmt, const std::string& albumName, int userId) const;
 
 public:
 	// Methods

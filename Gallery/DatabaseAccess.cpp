@@ -201,33 +201,6 @@ void DatabaseAccess::deleteUser(const User& user)
 	}
 }
 
-/*
-	Helper method to exectue a given sql query statement to avoid code duplication and implement the encapsulation pricple
-	input: the sql statement as a string
-	output: true if statement succeeded and false otherwise (according to SQLITE_OK)
-*/
-
-bool DatabaseAccess::executeSqlQuery(const std::string& statement) const
-{
-	char* errorMsg = nullptr;
-
-	int res = sqlite3_exec(this->m_db, statement.c_str(), nullptr, nullptr, &errorMsg);
-	if (res != SQLITE_OK)
-	{
-		std::cout << "Error:" << errorMsg << std::endl;
-
-		// if sqlite3 used errorMsg we need to free the memory using their functions
-		if (errorMsg)
-		{
-			sqlite3_free(errorMsg);
-		}
-		return false;
-	}
-	
-	std::cout << statement << std::endl;   // for debugging purposes
-	return true;
-}
-
 // PART 3
 
 // albums related
@@ -246,23 +219,18 @@ const std::list<Album> DatabaseAccess::getAlbums()
 
 	// we are going to be using prepared statements, this is what will contain the result of out query
 	// and we will be using sqlite3_step() in oreder to take out a one record at once
-	sqlite3_stmt* stmt = nullptr;
-
 	// prepare the statement
-	int res = sqlite3_prepare_v2(this->m_db, "SELECT ALBUMS.id, ALBUMS.name, ALBUMS.creation_date, ALBUMS.user_id, USERS.name FROM ALBUMS INNER JOIN USERS ON ALBUMS.user_id = USERS.id;", -1, &stmt, nullptr);
-	
-	// check for failure
-	if (res != SQLITE_OK)
+	sqlite3_stmt* stmt = prepare("SELECT ALBUMS.id, ALBUMS.name, ALBUMS.creation_date, ALBUMS.user_id, USERS.name FROM ALBUMS INNER JOIN USERS ON ALBUMS.user_id = USERS.id;");
+	if (!stmt)
 	{
-		std::cout << "Error: " << sqlite3_errmsg(this->m_db);
-		return {};  // return an empty list
+		return {};
 	}
 
 	// iterate through the records returned
 	while (sqlite3_step(stmt) == SQLITE_ROW)
 	{
 		// quick explanation about how i am extracting the records here
-		// the columnsa re sorted by 0 based index in the oreder i ahve selected in
+		// the columns a re sorted by 0 based index in the oreder i ahve selected in
 		// the SELECT quert above, the second paramerter of the sqlite3_column_sometype() is the index
 
 		// here we are getting the album id
@@ -280,7 +248,6 @@ const std::list<Album> DatabaseAccess::getAlbums()
 
 		// insert into the data
 		this->m_albums[albumName] = album;
-		std::cout << std::setw(5) << "* " << album;
 	}
 
 	// finish the statement
@@ -296,78 +263,227 @@ const std::list<Album> DatabaseAccess::getAlbums()
 	return albumsResult;
 }
 
-///*
-//	Helper static method to extract one record from a given sqlite3_stmt
-//	input: the sqlite statement
-//	output: the album
-//*/
-//
-//static const Album& DatabaseAccess::albumFromRow(sqlite3_stmt* stmt)
-//{
-//	// teh columns are oriented in the order we have selected in the query
-//
-//	int id = sqlite3_column_int(stmt, 0);
-//	
-//}
-
 /*
-	Helper static method to convert the const unsigned char* that sqlite3_colums_text() returns
-	input: the statement and the column to convert
-	output: the converted string
-*/
-
-static const std::string& DatabaseAccess::colText(sqlite3_stmt* stmt, int col)
-{
-	// extract it from the records
-	const unsigned char* text = sqlite3_column_text(stmt, col);
-
-	if (text)
-	{
-		// first of all, sqlite3_column_bytes returns the number of bytes in the text column
-		// and this string constructor copies the first text + sqlite3_column_bytes(stmt, col)
-		// from into the text "array"
-		return std::string(text, text + sqlite3_column_bytes(stmt, col));
-	}
-	else
-	{
-		return std::string();
-	}
-}
-
-/*
-
+	Method to get the albums of a certain user
+	input: the user (object)
+	output: the list of albums he owns
 */
 
 const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
 {
+	std::cout << "Albums list of user@" << user.getId() << ":" << std::endl;
+	std::cout << "-----------------------" << std::endl;
 
+	// the proccess is similar to getAlbums()
+	this->m_albums.clear();
+
+	// now we have a WHERE clause because we need to filter the answers
+	// we need to use ? in order to input the user id
+	sqlite3_stmt* stmt = prepare("SELECT name, creation_date FROM ALBUMS WHERE user_id = ?;");
+
+	if (!stmt)
+	{
+		return {};
+	}
+
+	// now we need to bind the user_id into the statement
+	// since sqlite3_bind is 1-based counted (unlike sqlite3_column), we have only one question mark
+	// so we bind to 1 the user id
+	sqlite3_bind_int(stmt, 1, user.getId());
+
+	std::list<Album> albumListByUser;
+
+	while (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		std::string albumName = colText(stmt, 0);
+		std::string creationDate = colText(stmt, 1);
+
+		Album album(user.getId(), albumName);
+		album.setCreationDate(creationDate);
+
+		// add to list
+		albumListByUser.push_back(album);
+	}
+
+	// finish the statement
+	sqlite3_finalize(stmt);
+	return albumListByUser;
 }
 
 /*
-
+	Method to create an album in the db using the given album object
 */
 
 void DatabaseAccess::createAlbum(const Album& album)
 {
+	sqlite3_stmt* stmt = prepare("INSERT INTO ALBUMS (name, creation_date, user_id) VALUES (?, ?, ?);");
 
+	if (!stmt)  // is nullptr
+	{
+		return;
+	}
+
+	// now we got 3 question marks we need to assign
+	// the fifth parameter is a destructor function pointer that SQLite
+	// will call to dispose of the data string after it has finished using it
+	// if it is the special value SQLITE_TRANSIENT it will make its own its own private copy of 
+	// the string data immediately, and the application is free to reuse or free its original memory as soon as sqlite3_bind_text() returns.
+	sqlite3_bind_text(stmt, 1, album.getName().c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 2, album.getCreationDate().c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_int(stmt, 3, album.getOwnerId());
+
+	if (sqlite3_step() != SQLITE_DONE)
+	{
+		std::cout << "Failed creating an album." << std::endl;
+	}
+	else
+	{
+		this->m_albums[album.getName()] = album;
+	}
+	sqlite3_finalize(stmt);
 }
 
 /*
+	Helper method to prepare a given SQL statement
+	input: the statement in char form
+	output: the sqlite3_stmt*
+*/
 
+sqlite3_stmt* DatabaseAccess::prepare(const char* statement) const
+{
+	sqlite3_stmt* stmt = nullptr;
+
+	// prepare the statement
+	int res = sqlite3_prepare_v3(this->m_db, statement, -1, &stmt, nullptr);
+
+	// check for failure
+	if (res != SQLITE_OK)
+	{
+		std::cout << "Error: " << sqlite3_errmsg(this->m_db);
+		return nullptr;
+	}
+	return stmt;
+}
+
+/*
+	Method to delete an album from the database
+	input: the album name to delete and its owner's id
+	output: no return values
 */
 
 void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 {
+	// this method too, requires more then one sql query
+	// which means we need a transaction in order to make sure its all or nothing
+	executeSqlQuery("BEGIN TRANSACTION;");
+	
+	// it will be simpler to understand if we won't use prepare() here
+	bool ok = true;
+	sqlite3_stmt* stmt = nullptr;
 
+	// this is a complicated query, we need to get the picture id
+	const char* deleteTags = "DELETE FROM TAGS WHERE picture_id"
+		"IN (SELECT PICTURES.id FROM PICTURES"
+		"INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id"
+		"WHERE ALBUMS.name = ? AND ALBUMS.user_id = ? ); ";
+
+	if (sqlite3_prepare_v2(this->m_db, deleteTags, -1, &stmt, nullptr) == SQLITE_OK)
+	{
+		// bind
+		deleteAlbumBind(stmt, albumName, userId);
+
+		// check if succeeded (was the last step because it sohuld only be one step)
+		ok = (sqlite3_step(stmt) == SQLITE_DONE);
+		sqlite3_finalize(stmt);
+	}
+	else
+	{
+		ok = false;
+	}
+
+	// move onto the next delete
+	if (ok)
+	{
+		const char* deletePictures = "DELETE FROM ALBUMS WHERE "
+			"ALBUM.name = ? AND user_id = ?;";	
+
+		if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_OK)
+		{
+			// bind
+			deleteAlbumBind(stmt, albumName, userId);
+
+			ok = (sqlite3_step(stmt) == SQLITE_DONE);
+			sqlite3_finalize(stmt);
+		}
+		else
+		{
+			ok = false;
+		}
+	}
+	// final query
+	if (ok)
+	{
+		const char* deletePictures = "DELETE FROM PICTURES WHERE "
+			"ALBUM.id = (SELECT FROM ALBUMS WHERE name = ? AND user_id = ?);";
+
+		if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_OK)
+		{
+			// bind
+			deleteAlbumBind(stmt, albumName, userId);
+
+			ok = (sqlite3_step(stmt) == SQLITE_DONE);
+			sqlite3_finalize(stmt);
+		}
+		else
+		{
+			ok = false;
+		}
+	}
+
+	// end the transaction by commiting or rolling back
+	if (ok)
+	{
+		executeSqlQuery("COMMIT;");
+		this->m_albums.erase(albumName);
+	}
+	else
+	{
+		executeSqlQuery("ROLLBACK;");
+		std::cout << "Delete album failed!" << std::endl;
+	}
 }
 
 /*
-
+	Method to check if an album exists
+	input: the album name and the owner's id
+	output: true if exists and false otherwise
 */
 
 bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
 {
+	// first check if its saved
+	auto it = this->m_albums.find(albumName);
+	if (it != this->m_albums.end())
+	{
+		// make sure its the correct user
+		return it->second.getOwnerId() == userId;
+	}
 
+	sqlite3_stmt* stmt = prepare("SELECT COUNT(*) FROM ALBUMS WHERE name  = ? AND user_id = ?;");
+	bool exists = false;
+	// bind the statement
+	sqlite3_bind_text(stmt, 1, albumName.c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_int(stmt, 2, userId);
+
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		// check if the count is bigger then 0
+		exists = (sqlite3_column_int(stmt, 0) > 0);
+	}
+
+	sqlite3_finalize(stmt);
+
+	return exists;
 }
 
 /*

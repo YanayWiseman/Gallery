@@ -155,7 +155,6 @@ void AlbumManager::listAlbumsOfUser()
 	}
 }
 
-
 // ******************* Picture ******************* 
 void AlbumManager::addPictureToAlbum()
 {
