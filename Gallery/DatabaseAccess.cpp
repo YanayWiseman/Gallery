@@ -925,7 +925,28 @@ int DatabaseAccess::countAlbumsOwnedOfUser(const User& user)
 
 int DatabaseAccess::countAlbumsTaggedOfUser(const User& user)
 {
+	// explanataion of the query:
+	//DISTINCT(PICTURES.album_id) returns the albums ids
+	// we need to join them to tags using their id's
+	// then we get the album id's that the user is tagged in them, but surrounding it with a COUNT
+	// makes it count the records returniing the count of albums tagged of user
+	sqlite3_stmt* stmt = prepare(" SELECT COUNT(DISTINCT(PICTURES.album_id)) "
+		"FROM TAGS INNER JOIN PICTURES ON TAGS.picture_id = PICTURES.id WHERE TAGS.user_id = ?;");
+	if (!stmt)
+	{
+		return 0;
+	}
 
+	int count = 0;
+
+	sqlite3_bind_int(stmt, 1, user.getId());
+	if (sqlite3_step() == SQLITE_ROW)
+	{
+		count = sqlite3_column_int(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+
+	return count;
 }
 
 /*
