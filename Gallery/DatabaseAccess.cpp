@@ -994,12 +994,14 @@ float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
 // queries
 
 /*
-
+	Method to get the user with the msot tags
+	input: no input values
+	output: the user (object)
 */
 
 User DatabaseAccess::getTopTaggedUser()
 {
-
+	sqlite3_stmt* stmt = prepare();
 }
 
 /*
@@ -1012,10 +1014,34 @@ Picture DatabaseAccess::getTopTaggedPicture()
 }
 
 /*
-
+	Method to get the tagged pictures of a user
+	input: the user
+	output: the list of pictures
 */
 
 std::list<Picture> DatabaseAccess::getTaggedPicturesOfUser(const User& user)
 {
+	this->m_pictures.clear();
 
+	sqlite3_stmt* stmt = prepare("SELECT PICTURES.id, PICTURES.name, PICTURES.location, PICTURES.creation_date "
+	"FROM PICTURES INNER JOIN TAGS ON PICTURES.id = TAGS.picture_id WHERE TAGS.user_id = ?;");
+	if (!stmt)
+	{
+		return {};
+	}
+
+	// bind and step
+	sqlite3_bind_int(stmt, 1, user.getId());
+	while (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		// craft the pictures
+		Picture picture(sqlite3_column_int(stmt, 0),  // id
+			DatabaseAccess::colText(stmt, 1),  // name
+			DatabaseAccess::colText(stmt, 2),  //location
+			DatabaseAccess::colText(stmt, 3));  //creation date
+		this->m_pictures.push_back(picture);
+	}
+	sqlite3_finalize(stmt);
+
+	return this->m_pictures;
 }
