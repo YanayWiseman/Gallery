@@ -950,21 +950,45 @@ int DatabaseAccess::countAlbumsTaggedOfUser(const User& user)
 }
 
 /*
-
+	Method to count the amount of tags a user have all accross all of fthe albums
+	input: the user
+	outpuut: the count
 */
 
 int DatabaseAccess::countTagsOfUser(const User& user)
 {
+	sqlite3_stmt* stmt = prepare("SELECT COUNT(*) FROM TAGS WHERE user_id = ?;");
+	if (!stmt)
+	{
+		return 0;
+	}
+	int count = 0;
 
+	sqlite3_bind_int(stmt, 1, user.getId());
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		count = sqlite3_column_int(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+
+	return count;
 }
 
 /*
-
+	Method the calculate the average tags per album of user
+	input: the user
+	output: the avg
 */
 
 float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
 {
+	int albums = countAlbumsOwnedOfUser(user);
+	if (albuns == 0)
+	{
+		return 0.0;
+	}
 
+	return (float)countTagsOfUser(user) / (float)albums;
 }
 
 // queries
