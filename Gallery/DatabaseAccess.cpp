@@ -790,35 +790,137 @@ void DatabaseAccess::removePictureFromAlbumByName(const std::string& albumName, 
 
 void DatabaseAccess::printUsers()
 {
+	this->m_users.clear();
 
+	// select all of the users
+	sqlite3_stmt* stmt = prepare("SELECT id, name FROM USERS;");
+	if (!stmt)
+	{
+		return;
+	}
+
+	// iterate through the user records
+	while (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		// extract the id and name from the record
+		int id = sqlite3_column_int(stmt, 0);
+		User user(id, DatabaseAccess::colText(stmt, 1));
+
+		this->m_users[id] = user;
+	}
+	sqlite3_finalize(stmt);
+
+	// print them
+	std::cout << "Users list : " << std::endl << "-----------" << std::endl;
+	for (const auto& pair : this->m_users)
+	{
+		std::cout << "   + @" << pair.first << " - " << pair.second.getName() << std::endl;
+	}
 }
+
+/*
+	Method to get a usetr by his id
+	input: the user's id
+	output: the user (object)
+*/
+
 User DatabaseAccess::getUser(int userId)
 {
+	// first check m_users
+	auto it = this->m_users.find(userId);
+	if (it != this->m_users.end())
+	{
+		return it->second;
+	}
+
+	sqlite3_stmt* stmt = prepare("SELECT name FROM USERS WHERE id = ?;");
+	// there is no need to check if the stmt is null since it will always return a value
+	// i can know that for sure because the method is only called when albumManager knows for
+	// sure that the userId exists
+
+	sqlite3_bind_int(stmt, 1, userId);
+
+	User user(-1, "");
+	if (sqlite3_step() != SQLITE_ROW)
+	{
+		// extract the data
+		user = User(userId, colText(stmt, 0));
+		this->m_users[userId] = user;
+	}
+	sqlite3_finalize(stmt);
+
+	return user;
 
 }
 
 /*
-
+	Method to check if a user exists by its id
+	input: the user's id
+	output: true if exists and false otherwise
 */
 
 bool DatabaseAccess::doesUserExists(int userId)
 {
+	// first check m_users
+	auto it = this->m_users.find(userId);
+	if (it != this->m_users.end())
+	{
+		return true
+	}
+	sqlite3_stmt* stmt = prepare("SELECT COUNT(*) FROM USERS WHERE id = ?;");
+	bool exists = false;
 
+
+	if (!stmt)
+	{
+		return false;
+	}
+	sqlite3_bind_int(stmt, 1, userId);
+
+	if (sqlite3_step() == SQLITE_ROW)
+	{
+		// if the count is bigger then 0 it exists
+		exists = (sqlite3_column_int(stmt, 0) > 0);
+	}
+	sqlite3_finalize(stmt);
+
+	return exists;	
 }
 
 // statistics
 
 /*
-
+	Method to count the amount of albums owner by a given user
+	input: the user to count his albumms
+	output: the count
 */
 
 int DatabaseAccess::countAlbumsOwnedOfUser(const User& user)
 {
+	sqlite3_stmt* stmt = prepare("SELECT COUNT(*) FROM ALBUMS WHERE user_id = ?;");
+	int count = 0;
 
+	if (!stmt)
+	{
+		return 0;
+	}
+
+	// bind
+	sqlite3_bind_int(stmt, 1, user.getId());
+
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		count = sqlite3_column_int(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+
+	return count;
 }
 
 /*
-
+	Method to count the amount of tags on albums of a user
+	input: the user
+	output: the count
 */
 
 int DatabaseAccess::countAlbumsTaggedOfUser(const User& user)
