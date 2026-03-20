@@ -100,6 +100,7 @@
   <ItemGroup>
     <ClCompile Include="Album.cpp" />
     <ClCompile Include="AlbumManager.cpp" />
+    <ClCompile Include="DatabaseAccess.cpp" />
     <ClCompile Include="MemoryAccess.cpp" />
     <ClCompile Include="Picture.cpp" />
     <ClCompile Include="User.cpp" />

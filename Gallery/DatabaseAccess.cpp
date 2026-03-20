@@ -209,7 +209,7 @@ sqlite3_stmt* DatabaseAccess::prepare(const char* statement) const
 	sqlite3_stmt* stmt = nullptr;
 
 	// prepare the statement
-	int res = sqlite3_prepare_v3(this->m_db, statement, -1, &stmt, nullptr);
+	int res = sqlite3_prepare_v2(this->m_db, statement, -1, &stmt, nullptr);
 
 	// check for failure
 	if (res != SQLITE_OK)
@@ -276,7 +276,7 @@ void DatabaseAccess::createUser(User& user)
 {
 	// we need to create an insert statement that creates a user into users with
 	// the given user's name and id even though id might be autoincremented
-	std::string addUser = "INSERT INTO USER (id, name) VALUES (" + std::string(user.getId()) + ", '" + std::string(user.getName()) + "');";
+	std::string addUser = "INSERT INTO USER (id, name) VALUES (" + std::to_string(user.getId()) + ", '" + user.getName() + "');";
 	
 	bool executed = executeSqlQuery(addUser);
 	if (!executed)
@@ -305,18 +305,18 @@ void DatabaseAccess::deleteUser(const User& user)
 	executeSqlQuery("BEGIN TRANSACTION;");
 
 	// delete from tags
-	std::string deleteFromTags = "DELETE FROM TAGS WHERE user_id = " + std::string(user.getId()) + ";";
+	std::string deleteFromTags = "DELETE FROM TAGS WHERE user_id = " + std::to_string(user.getId()) + ";";
 
 	// delete from pictures, this is a complicated query because we need to create another query in order
 	// to get the albums of the user
 	// also, since the SELECT query might return a list, we use the IN clause for an iterative deletion
-	std::string deleteFromPictures = "DELETE FROM PICTURES WHERE album_id IN (SELECT id FROM ALBUMS WHERE user_id = " + std::string(user.getId()) + ");";
+	std::string deleteFromPictures = "DELETE FROM PICTURES WHERE album_id IN (SELECT id FROM ALBUMS WHERE user_id = " + std::to_string(user.getId()) + ");";
 
 	// delete from albums
-	std::string deleteFromAlbums = "DELETE FROM ALBUMS WHERE user_id = " + std::string(user.getId()) + ";";
+	std::string deleteFromAlbums = "DELETE FROM ALBUMS WHERE user_id = " + std::to_string(user.getId()) + ";";
 
 	// finally delete from users
-	std::string deleteFromUsers = "DELETE FROM USERS WHERE id = " +std::string(user.getId()) + ";";
+	std::string deleteFromUsers = "DELETE FROM USERS WHERE id = " +std::to_string(user.getId()) + ";";
 
 	// execute deletion in order using a vector
 	std::vector<std::string> queries = { deleteFromTags, deleteFromPictures, deleteFromAlbums, deleteFromUsers };
@@ -326,7 +326,7 @@ void DatabaseAccess::deleteUser(const User& user)
 	for (const auto& query : queries)
 	{
 		// if even one of them fail, retrieve
-		if (!executeSqlQuery(currQuery))
+		if (!executeSqlQuery(query))
 		{
 			executed = false;
 			break;
@@ -401,7 +401,7 @@ const std::list<Album> DatabaseAccess::getAlbums()
 
 	// we are returning a list, not a map so lets convert
 	std::list<Album> albumsResult;
-	for (const auth& pair : this->m_albums)
+	for (const auto& pair : this->m_albums)
 	{
 		albumsResult.push_back(pair.second);
 	}
@@ -478,7 +478,7 @@ void DatabaseAccess::createAlbum(const Album& album)
 	sqlite3_bind_text(stmt, 2, album.getCreationDate().c_str(), -1, SQLITE_TRANSIENT);
 	sqlite3_bind_int(stmt, 3, album.getOwnerId());
 
-	if (sqlite3_step() != SQLITE_DONE)
+	if (sqlite3_step(stmt) != SQLITE_DONE)
 	{
 		std::cout << "Failed creating an album." << std::endl;
 	}
@@ -689,7 +689,7 @@ Album DatabaseAccess::openAlbum(const std::string& albumName)
 	}
 
 	sqlite3_bind_int(picturesStmt, 1, albumId);
-	while (sqlite3_step() == SQLITE_ROW)
+	while (sqlite3_step(picturesStmt) == SQLITE_ROW)
 	{
 		// construct the picture
 		Picture picture(sqlite3_column_int(picturesStmt, 0),  // id
@@ -703,8 +703,6 @@ Album DatabaseAccess::openAlbum(const std::string& albumName)
 	}
 	sqlite3_finalize(picturesStmt);
 
-	this->m_currentAlbum = album;  // save which album is open
-	this->m_isAlbumOpen = true;
 	return album;
 }
 
@@ -735,7 +733,7 @@ void DatabaseAccess::printAlbums()
 	// print all of the albums
 	for (auto& album : albumsList)
 	{
-		std::cout << "   * [" << album.getName() << " - created by user@" << album.getOwnerId <<
+		std::cout << "   * [" << album.getName() << " - created by user@" << album.getOwnerId() <<
 			album.getCreationDate() << std::endl;
 	}
 }
@@ -752,7 +750,7 @@ void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const
 {
 	// we need an insert statement
 	sqlite3_stmt* stmt= prepare("INSERT INTO PICTURES (name, location, creation_date, album_id)"
-		"VALUES  (?, ?, ?, (SELECT id FROM ALBUMS WHERE name = ?));";
+		"VALUES  (?, ?, ?, (SELECT id FROM ALBUMS WHERE name = ?));");
 	if (!stmt)
 	{
 		std::cout << "Failed" << std::endl;
@@ -760,13 +758,13 @@ void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const
 	}
 
 	// bind all of the values caarefully
-	sqlite3_bind_text(stmt, 0, picture.getName.c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 0, picture.getName().c_str(), -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(stmt, 1, picture.getPath().c_str(), -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(stmt, 2, picture.getCreationDate().c_str(), -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(stmt, 3, albumName.c_str(), -1, SQLITE_TRANSIENT);
 
 	// check if it returned  something else then DONE (success)
-	if (sqlite3_step() != SQLITE_DONE)
+	if (sqlite3_step(stmt) != SQLITE_DONE)
 	{
 		std::cout << "picture adding failed: " << sqlite3_errmsg(this->m_db) << std::endl;
 	}
@@ -899,7 +897,7 @@ User DatabaseAccess::getUser(int userId)
 	sqlite3_bind_int(stmt, 1, userId);
 
 	User user(-1, "");
-	if (sqlite3_step() != SQLITE_ROW)
+	if (sqlite3_step(stmt) != SQLITE_ROW)
 	{
 		// extract the data
 		user = User(userId, colText(stmt, 0));
@@ -923,7 +921,7 @@ bool DatabaseAccess::doesUserExists(int userId)
 	auto it = this->m_users.find(userId);
 	if (it != this->m_users.end())
 	{
-		return true
+		return true;
 	}
 	sqlite3_stmt* stmt = prepare("SELECT COUNT(*) FROM USERS WHERE id = ?;");
 	bool exists = false;
@@ -935,7 +933,7 @@ bool DatabaseAccess::doesUserExists(int userId)
 	}
 	sqlite3_bind_int(stmt, 1, userId);
 
-	if (sqlite3_step() == SQLITE_ROW)
+	if (sqlite3_step(stmt) == SQLITE_ROW)
 	{
 		// if the count is bigger then 0 it exists
 		exists = (sqlite3_column_int(stmt, 0) > 0);
@@ -995,7 +993,7 @@ int DatabaseAccess::countTagsOfUser(const User& user)
 float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
 {
 	int albums = countAlbumsOwnedOfUser(user);
-	if (albuns == 0)
+	if (albums == 0)
 	{
 		return 0.0;
 	}
