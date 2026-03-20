@@ -487,7 +487,9 @@ bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
 }
 
 /*
-
+	Method to open an album given its name
+	input: the album's name
+	output: the album itself
 */
 
 Album DatabaseAccess::openAlbum(const std::string& albumName)
