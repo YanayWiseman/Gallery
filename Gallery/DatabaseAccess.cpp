@@ -1043,7 +1043,27 @@ User DatabaseAccess::getTopTaggedUser()
 
 Picture DatabaseAccess::getTopTaggedPicture()
 {
-	
+	sqlite3_stmt* stmt = prepare("SELECT id, name, location, creation_date FROM PICTURES "
+		"INNER JOIN TAGS ON TAGS.picture_id = PICTURES.id "
+		"ORDER BY (SELECT COUNT(*) FROM TAGS WHERE TAGS.picture_id = PICTURES.id) DESC LIMIT 1;");
+	Picture picture(-1, "");
+
+	if (!stmt)
+	{
+		return picture;
+	}
+
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		// extract the values and create the picture
+		Picture picture(sqlite3_column_int(stmt, 0),  // id
+			DatabaseAccess::colText(stmt, 1),  // name
+			DatabaseAccess::colText(stmt, 2),  //location
+			DatabaseAccess::colText(stmt, 3));  //creation date
+	}
+
+	sqlite3_finalize(stmt);
+	return picture;
 }
 
 /*
