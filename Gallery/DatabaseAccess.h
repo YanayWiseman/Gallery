@@ -31,7 +31,7 @@ private:
 	static const std::string& colText(sqlite3_stmt* stmt, int col);
 	sqlite3_stmt* prepare(const char* statement) const;
 	void deleteAlbumBind(sqlite3_stmt* stmt, const std::string& albumName, int userId) const;
-
+	int runCountQuery(const char* query, int bindValue) const;
 public:
 	// Methods
 	

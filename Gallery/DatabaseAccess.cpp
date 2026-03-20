@@ -9,10 +9,42 @@
 */
 
 DatabaseAccess::DatabaseAccess()
-	: m_db(nullptr), m_dbFile(DATABASE_NAME), m_currentAlbum(0, ""),
-	m_isAlbumOpen(false)
+	: m_db(nullptr), m_dbFile(DATABASE_NAME)
 {
+	//  in oreder to execute queries on the database we need to open it
+	open();
 
+	// we need to create the tables
+	// users
+	executeSqlQuery("CREATE TABLE IF NOT EXISTS USERS ("
+		"  id INTEGER PRIMARY KEY,"
+		"  name TEXT NOT NULL"
+		");");
+	// albums
+	executeSqlQuery("CREATE TABLE IF NOT EXISTS ALBUMS ("
+		" id INTEGER PRIMARY KEY AUTOINCREMENT,"
+		" name TEXT NOT NULL,"
+		" creation_date TEXT NOT NULL,"
+		" user_id INTEGER NOT NULL,"
+		" FOREIGN KEY(user_id) REFERENCES USERS(id)"
+		");");
+	// pictures
+	executeSqlQuery("CREATE TABLE IF NOT EXISTS PICTURES ("
+		" id INTEGER PRIMARY KEY AUTOINCREMENT,"
+		" name TEXTNOT NULL,"
+		" location TEXT NOT NULL,"
+		" creation_date TEXT NOT NULL,"
+		" album_id INTEGER NOT NULL,"
+		" FOREIGN KEY(album_id) REFERENCES ALBUMS(id)"
+		");");
+	// tags
+	executeSqlQuery("CREATE TABLE IF NOT EXISTS TAGS ("
+		" id INTEGER PRIMARY KEY AUTOINCREMENT,"
+		" picture_id INTEGER NOT NULL,"
+		" user_id INTEGER NOT NULL,"
+		" FOREIGN KEY(picture_id) REFERENCES PICTURES(id),"
+		" FOREIGN KEY(user_id) REFERENCES USERS(id)"
+		");");
 }
 
 /*
@@ -139,6 +171,32 @@ void DatabaseAccess::deleteAlbumBind(sqlite3_stmt* stmt, const std::string& albu
 	sqlite3_bind_text(stmt, 1, albumName.c_str(), -1, SQLITE_TRANSIENT);
 	sqlite3_bind_int(stmt, 2, userId);
 }
+
+/*
+	Helper method for the statistics part, to avoid code duplication in the functions that have the same pattern
+	input: the query and thhe bind value
+	output: the count (result of statistics query)
+*/
+
+int DatabaseAccess::runCountQuery(const char* query, int bindValue) const
+{
+	sqlite3_stmt* stmt = prepare(query);
+	if (!stmt)
+	{
+		return 0;
+	}
+	int count = 0;
+
+	sqlite3_bind_int(stmt, 1, bindValue);
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		count = sqlite3_column_int(stmt, 0);
+	}
+	sqlite3_finalize(stmt);
+
+	return count;
+}
+
 
 /*
 	Helper method to prepare a given SQL statement
@@ -897,24 +955,7 @@ bool DatabaseAccess::doesUserExists(int userId)
 
 int DatabaseAccess::countAlbumsOwnedOfUser(const User& user)
 {
-	sqlite3_stmt* stmt = prepare("SELECT COUNT(*) FROM ALBUMS WHERE user_id = ?;");
-	int count = 0;
-
-	if (!stmt)
-	{
-		return 0;
-	}
-
-	// bind
-	sqlite3_bind_int(stmt, 1, user.getId());
-
-	if (sqlite3_step(stmt) == SQLITE_ROW)
-	{
-		count = sqlite3_column_int(stmt, 0);
-	}
-	sqlite3_finalize(stmt);
-
-	return count;
+	return runCountQuery("SELECT COUNT(*) FROM ALBUMS WHERE user_id = ?;", user.getId());
 }
 
 /*
@@ -930,23 +971,8 @@ int DatabaseAccess::countAlbumsTaggedOfUser(const User& user)
 	// we need to join them to tags using their id's
 	// then we get the album id's that the user is tagged in them, but surrounding it with a COUNT
 	// makes it count the records returniing the count of albums tagged of user
-	sqlite3_stmt* stmt = prepare(" SELECT COUNT(DISTINCT(PICTURES.album_id)) "
-		"FROM TAGS INNER JOIN PICTURES ON TAGS.picture_id = PICTURES.id WHERE TAGS.user_id = ?;");
-	if (!stmt)
-	{
-		return 0;
-	}
-
-	int count = 0;
-
-	sqlite3_bind_int(stmt, 1, user.getId());
-	if (sqlite3_step() == SQLITE_ROW)
-	{
-		count = sqlite3_column_int(stmt, 0);
-	}
-	sqlite3_finalize(stmt);
-
-	return count;
+	return runCountQuery("SELECT COUNT(DISTINCT(PICTURES.album_id)) "
+		"FROM TAGS INNER JOIN PICTURES ON TAGS.picture_id = PICTURES.id WHERE TAGS.user_id = ?;", user.getId());
 }
 
 /*
@@ -957,21 +983,7 @@ int DatabaseAccess::countAlbumsTaggedOfUser(const User& user)
 
 int DatabaseAccess::countTagsOfUser(const User& user)
 {
-	sqlite3_stmt* stmt = prepare("SELECT COUNT(*) FROM TAGS WHERE user_id = ?;");
-	if (!stmt)
-	{
-		return 0;
-	}
-	int count = 0;
-
-	sqlite3_bind_int(stmt, 1, user.getId());
-	if (sqlite3_step(stmt) == SQLITE_ROW)
-	{
-		count = sqlite3_column_int(stmt, 0);
-	}
-	sqlite3_finalize(stmt);
-
-	return count;
+	return runCountQuery("SELECT COUNT(*) FROM TAGS WHERE user_id = ?;", user.getId());
 }
 
 /*
@@ -1001,16 +1013,37 @@ float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
 
 User DatabaseAccess::getTopTaggedUser()
 {
-	sqlite3_stmt* stmt = prepare();
+	sqlite3_stmt* stmt = prepare("SELECT id, name FROM USERS ORDER BY (SELECT COUNT(*)"
+		" FROM TAGS WHERE TAGS.user_id = USERS.id) DESC LIMIT 1;");
+	User user(-1, "");
+	if (!stmt)
+	{
+		return user;
+	}
+
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		// extract the values
+		int id = sqlite3_column_int(stmt, 0);
+		user.setId(id);
+		user.setName(DatabaseAccess::colText(stmt, 1));
+
+		this->m_users[id] = user;
+	}
+
+	sqlite3_finalize(stmt);
+	return user;
 }
 
 /*
-
+	Method to get the picture with the most tags
+	input: no input values
+	output: the picture with the most tags
 */
 
 Picture DatabaseAccess::getTopTaggedPicture()
 {
-
+	
 }
 
 /*
