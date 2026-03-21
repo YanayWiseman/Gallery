@@ -746,7 +746,7 @@ void DatabaseAccess::printAlbums()
 	// print all of the albums
 	for (auto& album : albumsList)
 	{
-		std::cout << "   * [" << album.getName() << "] - created by user@" << album.getOwnerId() <<
+		std::cout << "   * [" << album.getName() << "] - created by user@" << album.getOwnerId() << " " <<
 			album.getCreationDate() << std::endl;
 	}
 }
