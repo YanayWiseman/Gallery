@@ -40,7 +40,7 @@ int getCommandNumberFromUser()
 
 void printSystemInfo()
 {
-	std::cout << "Developer: Yanay Wiseman\nCurrent date:" << std::endl;
+	std::cout << "Chief Developer: Yanay Wiseman\nCurrent date:" << std::endl;
 
 	time_t now = time(nullptr);
 	std::stringstream oss;

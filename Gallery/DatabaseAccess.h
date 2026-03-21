@@ -28,7 +28,7 @@ private:
 	std::list<Picture> m_pictures;
 
 	bool executeSqlQuery(const std::string& statement) const;
-	static const std::string& colText(sqlite3_stmt* stmt, int col);
+	static std::string colText(sqlite3_stmt* stmt, int col);  // returning a reference here breaks the function's usages
 	sqlite3_stmt* prepare(const char* statement) const;
 	void deleteAlbumBind(sqlite3_stmt* stmt, const std::string& albumName, int userId) const;
 	int runCountQuery(const char* query, int bindValue) const;

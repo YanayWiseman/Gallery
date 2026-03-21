@@ -31,7 +31,7 @@ DatabaseAccess::DatabaseAccess()
 	// pictures
 	executeSqlQuery("CREATE TABLE IF NOT EXISTS PICTURES ("
 		" id INTEGER PRIMARY KEY AUTOINCREMENT,"
-		" name TEXTNOT NULL,"
+		" name TEXT NOT NULL,"
 		" location TEXT NOT NULL,"
 		" creation_date TEXT NOT NULL,"
 		" album_id INTEGER NOT NULL,"
@@ -43,7 +43,8 @@ DatabaseAccess::DatabaseAccess()
 		" picture_id INTEGER NOT NULL,"
 		" user_id INTEGER NOT NULL,"
 		" FOREIGN KEY(picture_id) REFERENCES PICTURES(id),"
-		" FOREIGN KEY(user_id) REFERENCES USERS(id)"
+		" FOREIGN KEY(user_id) REFERENCES USERS(id),"
+		" UNIQUE(picture_id, user_id)"  // one tag per user per picture
 		");");
 }
 
@@ -66,6 +67,12 @@ DatabaseAccess::~DatabaseAccess()
 
 bool DatabaseAccess::open()
 {
+	// open is called more then once in gallery.cpp
+	if (this->m_db != nullptr)
+	{
+		return true;
+	}
+
 	// open the data base
 	int res = sqlite3_open(this->m_dbFile.c_str(), &this->m_db);
 
@@ -142,7 +149,7 @@ bool DatabaseAccess::executeSqlQuery(const std::string& statement) const
 	output: the converted string
 */
 
-const std::string& DatabaseAccess::colText(sqlite3_stmt* stmt, int col)
+std::string DatabaseAccess::colText(sqlite3_stmt* stmt, int col)
 {
 	// extract it from the records
 	const unsigned char* text = sqlite3_column_text(stmt, col);
@@ -236,7 +243,9 @@ void DatabaseAccess::tagUserInPicture(const std::string& albumName, const std::s
 	// we need to make an sql query to get the picture's id using the picture's name and its album's name
 	// and integrate it into an INSERT query
 	std::string getPictureId = "(SELECT PICTURES.id FROM PICTURES INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id WHERE PICTURES.name = '" + pictureName + "' AND ALBUMS.name = '" + albumName + "')";
-	std::string tagUserInPicture = "INSERT INTO TAGS (picture_id, user_id) VALUES (" + getPictureId + ", " + std::to_string(userId) + ");";
+
+	// insert or ignore silently skips if the pair (picture id, user id) already exists
+	std::string tagUserInPicture = "INSERT OR IGNORE INTO TAGS (picture_id, user_id) VALUES (" + getPictureId + ", " + std::to_string(userId) + ");";
 	
 	bool executed = executeSqlQuery(tagUserInPicture);
 	if (!executed)
@@ -276,7 +285,7 @@ void DatabaseAccess::createUser(User& user)
 {
 	// we need to create an insert statement that creates a user into users with
 	// the given user's name and id even though id might be autoincremented
-	std::string addUser = "INSERT INTO USER (id, name) VALUES (" + std::to_string(user.getId()) + ", '" + user.getName() + "');";
+	std::string addUser = "INSERT INTO USERS (id, name) VALUES (" + std::to_string(user.getId()) + ", '" + user.getName() + "');";
 	
 	bool executed = executeSqlQuery(addUser);
 	if (!executed)
@@ -379,9 +388,6 @@ const std::list<Album> DatabaseAccess::getAlbums()
 		// the columns a re sorted by 0 based index in the oreder i ahve selected in
 		// the SELECT quert above, the second paramerter of the sqlite3_column_sometype() is the index
 
-		// here we are getting the album id
-		int id = sqlite3_column_int(stmt, 0);
-	
 		// sqlite3_column_text() returns a const unsigned char* so we need
 		// to convert in oreder to create an album instance
 		std::string albumName = DatabaseAccess::colText(stmt, 1);
@@ -507,10 +513,10 @@ void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 	sqlite3_stmt* stmt = nullptr;
 
 	// this is a complicated query, we need to get the picture id
-	const char* deleteTags = "DELETE FROM TAGS WHERE picture_id"
-		"IN (SELECT PICTURES.id FROM PICTURES"
-		"INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id"
-		"WHERE ALBUMS.name = ? AND ALBUMS.user_id = ? ); ";
+	const char* deleteTags = "DELETE FROM TAGS WHERE picture_id "
+		"IN (SELECT PICTURES.id FROM PICTURES "
+		"INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id "
+		"WHERE ALBUMS.name = ? AND ALBUMS.user_id = ? );";
 
 	if (sqlite3_prepare_v2(this->m_db, deleteTags, -1, &stmt, nullptr) == SQLITE_OK)
 	{
@@ -529,8 +535,8 @@ void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 	// move onto the next delete
 	if (ok)
 	{
-		const char* deletePictures = "DELETE FROM ALBUMS WHERE "
-			"ALBUM.name = ? AND user_id = ?;";	
+		const char* deletePictures = "DELETE FROM PICTURES WHERE "
+			"album_id = (SELECT id FROM ALBUMS WHERE name = ? AND user_id = ?);";	
 
 		if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_OK)
 		{
@@ -548,10 +554,9 @@ void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 	// final query
 	if (ok)
 	{
-		const char* deletePictures = "DELETE FROM PICTURES WHERE "
-			"ALBUM.id = (SELECT FROM ALBUMS WHERE name = ? AND user_id = ?);";
+		const char* deleteAlbums = "DELETE FROM ALBUMS WHERE name = ? AND user_id = ?;";
 
-		if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_OK)
+		if (sqlite3_prepare_v2(this->m_db, deleteAlbums, -1, &stmt, nullptr) == SQLITE_OK)
 		{
 			// bind
 			deleteAlbumBind(stmt, albumName, userId);
@@ -758,10 +763,10 @@ void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const
 	}
 
 	// bind all of the values caarefully
-	sqlite3_bind_text(stmt, 0, picture.getName().c_str(), -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 1, picture.getPath().c_str(), -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 2, picture.getCreationDate().c_str(), -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 3, albumName.c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 1, picture.getName().c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 2, picture.getPath().c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 3, picture.getCreationDate().c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 4, albumName.c_str(), -1, SQLITE_TRANSIENT);
 
 	// check if it returned  something else then DONE (success)
 	if (sqlite3_step(stmt) != SQLITE_DONE)
@@ -795,8 +800,8 @@ void DatabaseAccess::removePictureFromAlbumByName(const std::string& albumName, 
 	if (sqlite3_prepare_v2(this->m_db, deleteTags, -1, &stmt, nullptr) == SQLITE_OK)
 	{
 		// lets bind
-		sqlite3_bind_text(stmt, 0, pictureName.c_str(), -1, SQLITE_TRANSIENT);
-		sqlite3_bind_text(stmt, 1, albumName.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 1, pictureName.c_str(), -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 2, albumName.c_str(), -1, SQLITE_TRANSIENT);
 
 		ok = (sqlite3_step(stmt) == SQLITE_DONE);
 		sqlite3_finalize(stmt);
@@ -810,10 +815,10 @@ void DatabaseAccess::removePictureFromAlbumByName(const std::string& albumName, 
 	if (ok)
 	{
 		const char* deletePictures = "DELETE FROM PICTURES WHERE name = ? AND album_id = (SELECT id FROM ALBUMS WHERE name = ?);";
-		if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_DONE)
+		if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_OK)
 		{
-			sqlite3_bind_text(stmt, 0, pictureName.c_str(), -1, SQLITE_TRANSIENT);
-			sqlite3_bind_text(stmt, 1, albumName.c_str(), -1, SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt, 1, pictureName.c_str(), -1, SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt, 2, albumName.c_str(), -1, SQLITE_TRANSIENT);
 
 			ok = (sqlite3_step(stmt) == SQLITE_DONE);
 			sqlite3_finalize(stmt);
@@ -862,7 +867,7 @@ void DatabaseAccess::printUsers()
 		int id = sqlite3_column_int(stmt, 0);
 		User user(id, DatabaseAccess::colText(stmt, 1));
 
-		this->m_users[id] = user;
+		this->m_users.insert({ id, user });
 	}
 	sqlite3_finalize(stmt);
 
@@ -897,11 +902,12 @@ User DatabaseAccess::getUser(int userId)
 	sqlite3_bind_int(stmt, 1, userId);
 
 	User user(-1, "");
-	if (sqlite3_step(stmt) != SQLITE_ROW)
+	if (sqlite3_step(stmt) == SQLITE_ROW)
 	{
 		// extract the data
 		user = User(userId, colText(stmt, 0));
-		this->m_users[userId] = user;
+		this->m_users.insert({ userId, user });
+
 	}
 	sqlite3_finalize(stmt);
 
@@ -1026,7 +1032,7 @@ User DatabaseAccess::getTopTaggedUser()
 		user.setId(id);
 		user.setName(DatabaseAccess::colText(stmt, 1));
 
-		this->m_users[id] = user;
+		this->m_users.insert({ id, user });
 	}
 
 	sqlite3_finalize(stmt);
@@ -1042,7 +1048,6 @@ User DatabaseAccess::getTopTaggedUser()
 Picture DatabaseAccess::getTopTaggedPicture()
 {
 	sqlite3_stmt* stmt = prepare("SELECT id, name, location, creation_date FROM PICTURES "
-		"INNER JOIN TAGS ON TAGS.picture_id = PICTURES.id "
 		"ORDER BY (SELECT COUNT(*) FROM TAGS WHERE TAGS.picture_id = PICTURES.id) DESC LIMIT 1;");
 	Picture picture(-1, "");
 
@@ -1054,10 +1059,10 @@ Picture DatabaseAccess::getTopTaggedPicture()
 	if (sqlite3_step(stmt) == SQLITE_ROW)
 	{
 		// extract the values and create the picture
-		Picture picture(sqlite3_column_int(stmt, 0),  // id
-			DatabaseAccess::colText(stmt, 1),  // name
-			DatabaseAccess::colText(stmt, 2),  //location
-			DatabaseAccess::colText(stmt, 3));  //creation date
+		picture.setId(sqlite3_column_int(stmt, 0));  // id
+		picture.setName(DatabaseAccess::colText(stmt, 1)); // name
+		picture.setPath(DatabaseAccess::colText(stmt, 2));  //location
+		picture.setCreationDate(DatabaseAccess::colText(stmt, 3));  //creation date
 	}
 
 	sqlite3_finalize(stmt);
@@ -1075,7 +1080,7 @@ std::list<Picture> DatabaseAccess::getTaggedPicturesOfUser(const User& user)
 	this->m_pictures.clear();
 
 	sqlite3_stmt* stmt = prepare("SELECT PICTURES.id, PICTURES.name, PICTURES.location, PICTURES.creation_date "
-	"FROM PICTURES INNER JOIN TAGS ON PICTURES.id = TAGS.picture_id WHERE TAGS.user_id = ?;");
+	"FROM PICTURES WHERE id IN (SELECT picture_id FROM TAGS WHERE user_id = ?);");
 	if (!stmt)
 	{
 		return {};
