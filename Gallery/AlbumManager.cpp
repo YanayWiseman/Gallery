@@ -155,7 +155,6 @@ void AlbumManager::listAlbumsOfUser()
 	}
 }
 
-
 // ******************* Picture ******************* 
 void AlbumManager::addPictureToAlbum()
 {
@@ -416,10 +415,12 @@ void AlbumManager::help()
 std::string AlbumManager::getInputFromConsole(const std::string& message)
 {
 	std::string input;
-	do {
+	do
+	{
 		std::cout << message;
 		std::getline(std::cin, input);
-	} while (input.empty());
+	}
+	while (input.empty());
 	
 	return input;
 }

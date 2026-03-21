@@ -3,6 +3,7 @@
 #include <sstream>
 #include "MemoryAccess.h"
 #include "AlbumManager.h"
+#include "DatabaseAccess.h"
 
 
 int getCommandNumberFromUser()
@@ -39,7 +40,7 @@ int getCommandNumberFromUser()
 
 void printSystemInfo()
 {
-	std::cout << "Developer: Yanay Wiseman\nCurrent date:" << std::endl;
+	std::cout << "Chief Developer: Yanay Wiseman\nCurrent date:" << std::endl;
 
 	time_t now = time(nullptr);
 	std::stringstream oss;
@@ -52,7 +53,8 @@ void printSystemInfo()
 int main(void)
 {
 	// initialization data access
-	MemoryAccess dataAccess;
+	DatabaseAccess dataAccess;
+	dataAccess.open();
 
 	// initialize album manager
 	AlbumManager albumManager(dataAccess);
