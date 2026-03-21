@@ -42,8 +42,8 @@ DatabaseAccess::DatabaseAccess()
 		" id INTEGER PRIMARY KEY AUTOINCREMENT,"
 		" picture_id INTEGER NOT NULL,"
 		" user_id INTEGER NOT NULL,"
-		" FOREIGN KEY(picture_id) REFERENCES PICTURES(id),"
-		" FOREIGN KEY(user_id) REFERENCES USERS(id),"
+		" FOREIGN KEY(picture_id) REFERENCES PICTURES(id) ON DELETE CASCADE,,"
+		" FOREIGN KEY(user_id) REFERENCES USERS(id) ON DELETE CASCADE,,"
 		" UNIQUE(picture_id, user_id)"  // one tag per user per picture
 		");");
 }
@@ -245,7 +245,7 @@ void DatabaseAccess::tagUserInPicture(const std::string& albumName, const std::s
 
 	// insert or ignore silently skips if the pair (picture id, user id) already exists
 	std::string tagUserInPicture = "INSERT OR IGNORE INTO TAGS (picture_id, user_id) VALUES (" + getPictureId + ", " + std::to_string(userId) + ");";
-	
+
 	bool executed = executeSqlQuery(tagUserInPicture);
 	if (!executed)
 	{
@@ -263,7 +263,7 @@ void DatabaseAccess::untagUserInPicture(const std::string& albumName, const std:
 {
 	// here too, we nede the picture id by the album name and picture's name.
 	std::string getPictureId = "(SELECT PICTURES.id FROM PICTURES INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id WHERE PICTURES.name = '" + pictureName + "' AND ALBUMS.name = '" + albumName + "')";
-	
+
 	// but now we want to remove it
 	std::string unTagUser = "DELETE FROM TAGS WHERE TAGS.picture_id = " + getPictureId + " AND TAGS.user_id = " + std::to_string(userId) + ";";
 
@@ -285,7 +285,7 @@ void DatabaseAccess::createUser(User& user)
 	// we need to create an insert statement that creates a user into users with
 	// the given user's name and id even though id might be autoincremented
 	std::string addUser = "INSERT INTO USERS (id, name) VALUES (" + std::to_string(user.getId()) + ", '" + user.getName() + "');";
-	
+
 	bool executed = executeSqlQuery(addUser);
 	if (!executed)
 	{
@@ -312,9 +312,6 @@ void DatabaseAccess::deleteUser(const User& user)
 	// all or nothing
 	executeSqlQuery("BEGIN TRANSACTION;");
 
-	// delete from tags
-	std::string deleteFromTags = "DELETE FROM TAGS WHERE user_id = " + std::to_string(user.getId()) + ";";
-
 	// delete from pictures, this is a complicated query because we need to create another query in order
 	// to get the albums of the user
 	// also, since the SELECT query might return a list, we use the IN clause for an iterative deletion
@@ -324,10 +321,10 @@ void DatabaseAccess::deleteUser(const User& user)
 	std::string deleteFromAlbums = "DELETE FROM ALBUMS WHERE user_id = " + std::to_string(user.getId()) + ";";
 
 	// finally delete from users
-	std::string deleteFromUsers = "DELETE FROM USERS WHERE id = " +std::to_string(user.getId()) + ";";
+	std::string deleteFromUsers = "DELETE FROM USERS WHERE id = " + std::to_string(user.getId()) + ";";
 
 	// execute deletion in order using a vector
-	std::vector<std::string> queries = { deleteFromTags, deleteFromPictures, deleteFromAlbums, deleteFromUsers };
+	std::vector<std::string> queries = { deleteFromPictures, deleteFromAlbums, deleteFromUsers };
 	bool executed = true;
 
 	// loop through the vector
@@ -502,24 +499,20 @@ void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 	// this method too, requires more then one sql query
 	// which means we need a transaction in order to make sure its all or nothing
 	executeSqlQuery("BEGIN TRANSACTION;");
-	
+
 	// it will be simpler if we won't use prepare() here
 	// because we are using one sqlite3_stmt for multiple queries
 	bool ok = true;
 	sqlite3_stmt* stmt = nullptr;
 
-	// this is a complicated query, we need to get the picture id
-	const char* deleteTags = "DELETE FROM TAGS WHERE picture_id "
-		"IN (SELECT PICTURES.id FROM PICTURES "
-		"INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id "
-		"WHERE ALBUMS.name = ? AND ALBUMS.user_id = ? );";
+	const char* deletePictures = "DELETE FROM PICTURES WHERE "
+		"album_id = (SELECT id FROM ALBUMS WHERE name = ? AND user_id = ?);";
 
-	if (sqlite3_prepare_v2(this->m_db, deleteTags, -1, &stmt, nullptr) == SQLITE_OK)
+	if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_OK)
 	{
 		// bind
 		deleteAlbumBind(stmt, albumName, userId);
 
-		// check if succeeded (was the last step because it sohuld only be one step)
 		ok = (sqlite3_step(stmt) == SQLITE_DONE);
 		sqlite3_finalize(stmt);
 	}
@@ -528,26 +521,7 @@ void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 		ok = false;
 	}
 
-	// move onto the next delete
-	if (ok)
-	{
-		const char* deletePictures = "DELETE FROM PICTURES WHERE "
-			"album_id = (SELECT id FROM ALBUMS WHERE name = ? AND user_id = ?);";	
-
-		if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_OK)
-		{
-			// bind
-			deleteAlbumBind(stmt, albumName, userId);
-
-			ok = (sqlite3_step(stmt) == SQLITE_DONE);
-			sqlite3_finalize(stmt);
-		}
-		else
-		{
-			ok = false;
-		}
-	}
-	// final query
+	// delete from albums
 	if (ok)
 	{
 		const char* deleteAlbums = "DELETE FROM ALBUMS WHERE name = ? AND user_id = ?;";
@@ -642,7 +616,7 @@ Album DatabaseAccess::openAlbum(const std::string& albumName)
 			return Album(0, "");
 		}
 		sqlite3_bind_text(idStmt, 1, albumName.c_str(), -1, SQLITE_TRANSIENT);
-		
+
 		if (sqlite3_step(idStmt) == SQLITE_ROW)
 		{
 			albumId = sqlite3_column_int(idStmt, 0);
@@ -662,7 +636,7 @@ Album DatabaseAccess::openAlbum(const std::string& albumName)
 		}
 		// bind the question mark
 		sqlite3_bind_text(stmt, 1, albumName.c_str(), -1, SQLITE_TRANSIENT);
-		if(sqlite3_step(stmt) == SQLITE_ROW)
+		if (sqlite3_step(stmt) == SQLITE_ROW)
 		{
 			// extract all of the data
 			albumId = sqlite3_column_int(stmt, 0);
@@ -683,7 +657,7 @@ Album DatabaseAccess::openAlbum(const std::string& albumName)
 
 	// add the pictures to the album
 	sqlite3_stmt* picturesStmt = prepare("SELECT id, name, location, creation_date "
-	"FROM PICTURES WHERE album_id = ?;");
+		"FROM PICTURES WHERE album_id = ?;");
 	if (!picturesStmt)
 	{
 		return Album(0, "");
@@ -726,7 +700,7 @@ Album DatabaseAccess::openAlbum(const std::string& albumName)
 */
 
 void DatabaseAccess::closeAlbum(Album& pAlbum)
-{ 
+{
 	// album manager does most of the work for us
 	this->m_pictures.clear();
 }
@@ -762,7 +736,7 @@ void DatabaseAccess::printAlbums()
 void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const Picture& picture)
 {
 	// we need an insert statement
-	sqlite3_stmt* stmt= prepare("INSERT INTO PICTURES (name, location, creation_date, album_id)"
+	sqlite3_stmt* stmt = prepare("INSERT INTO PICTURES (name, location, creation_date, album_id)"
 		"VALUES  (?, ?, ?, (SELECT id FROM ALBUMS WHERE name = ?));");
 	if (!stmt)
 	{
@@ -793,59 +767,19 @@ void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const
 
 void DatabaseAccess::removePictureFromAlbumByName(const std::string& albumName, const std::string& pictureName)
 {
-	// again, this is a multible query situation so we need a transaction
-	executeSqlQuery("BEGIN TRANSACTION;");
-	
-	// it will be simpler if we won't use prepare() here
-	// because we are using one sqlite3_stmt for multiple queries
 	sqlite3_stmt* stmt = nullptr;
-	bool ok = false;
 
-	// we need to make a query that allows us to remove the tags only by album name and picture name
-	const char* deleteTags = "DELETE FROM TAGS WHERE picture_id = "
-		"(SELECT PICTURES.id FROM PICTURES INNER JOIN ALBUMS ON ALBUMS.id = PICTURES.album_id "
-		"WHERE PICTURES.name = ? AND ALBUMS.name = ?);";
-	if (sqlite3_prepare_v2(this->m_db, deleteTags, -1, &stmt, nullptr) == SQLITE_OK)
+	const char* deletePictures = "DELETE FROM PICTURES WHERE name = ? AND album_id = (SELECT id FROM ALBUMS WHERE name = ?);";
+	if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_OK)
 	{
-		// lets bind
 		sqlite3_bind_text(stmt, 1, pictureName.c_str(), -1, SQLITE_TRANSIENT);
 		sqlite3_bind_text(stmt, 2, albumName.c_str(), -1, SQLITE_TRANSIENT);
 
-		ok = (sqlite3_step(stmt) == SQLITE_DONE);
+		if (sqlite3_step(stmt) != SQLITE_DONE)
+		{
+			std::cout << "Removing picture failed!" << std::endl;
+		}
 		sqlite3_finalize(stmt);
-	}
-	else
-	{
-		ok = false;
-	}
-
-	// move on to the next deletion
-	if (ok)
-	{
-		const char* deletePictures = "DELETE FROM PICTURES WHERE name = ? AND album_id = (SELECT id FROM ALBUMS WHERE name = ?);";
-		if (sqlite3_prepare_v2(this->m_db, deletePictures, -1, &stmt, nullptr) == SQLITE_OK)
-		{
-			sqlite3_bind_text(stmt, 1, pictureName.c_str(), -1, SQLITE_TRANSIENT);
-			sqlite3_bind_text(stmt, 2, albumName.c_str(), -1, SQLITE_TRANSIENT);
-
-			ok = (sqlite3_step(stmt) == SQLITE_DONE);
-			sqlite3_finalize(stmt);
-		}
-		else
-		{
-			ok = false;
-		}
-	}
-	if (ok)
-	{
-		// commit
-		executeSqlQuery("COMMIT;");
-	}
-	else
-	{
-		// rollback
-		executeSqlQuery("ROLLBACK;");
-		std::cout << "removing picture failed." << std::endl;
 	}
 }
 
@@ -954,7 +888,7 @@ bool DatabaseAccess::doesUserExists(int userId)
 	}
 	sqlite3_finalize(stmt);
 
-	return exists;	
+	return exists;
 }
 
 // statistics
@@ -1089,7 +1023,7 @@ std::list<Picture> DatabaseAccess::getTaggedPicturesOfUser(const User& user)
 	this->m_pictures.clear();
 
 	sqlite3_stmt* stmt = prepare("SELECT PICTURES.id, PICTURES.name, PICTURES.location, PICTURES.creation_date "
-	"FROM PICTURES WHERE id IN (SELECT picture_id FROM TAGS WHERE user_id = ?);");
+		"FROM PICTURES WHERE id IN (SELECT picture_id FROM TAGS WHERE user_id = ?);");
 	if (!stmt)
 	{
 		return {};
