@@ -139,7 +139,6 @@ bool DatabaseAccess::executeSqlQuery(const std::string& statement) const
 		return false;
 	}
 
-	std::cout << statement << std::endl;   // for debugging purposes
 	return true;
 }
 
@@ -423,9 +422,6 @@ const std::list<Album> DatabaseAccess::getAlbums()
 
 const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
 {
-	std::cout << "Albums list of user@" << user.getId() << ":" << std::endl;
-	std::cout << "-----------------------" << std::endl;
-
 	// the proccess is similar to getAlbums()
 	this->m_albums.clear();
 
@@ -702,6 +698,18 @@ Album DatabaseAccess::openAlbum(const std::string& albumName)
 			DatabaseAccess::colText(picturesStmt, 2), //location
 			DatabaseAccess::colText(picturesStmt, 3));  //creation date
 
+		// add the tags
+		sqlite3_stmt* tagStmt = prepare("SELECT user_id FROM TAGS WHERE picture_id = ?;");
+		if (tagStmt)
+		{
+			sqlite3_bind_int(tagStmt, 1, picture.getId());
+			while (sqlite3_step(tagStmt) == SQLITE_ROW)
+			{
+				picture.tagUser(sqlite3_column_int(tagStmt, 0));
+			}
+			sqlite3_finalize(tagStmt);
+		}
+
 		// add to the local db and to the album itself
 		this->m_pictures.push_back(picture);
 		album.addPicture(picture);
@@ -738,7 +746,7 @@ void DatabaseAccess::printAlbums()
 	// print all of the albums
 	for (auto& album : albumsList)
 	{
-		std::cout << "   * [" << album.getName() << " - created by user@" << album.getOwnerId() <<
+		std::cout << "   * [" << album.getName() << "] - created by user@" << album.getOwnerId() <<
 			album.getCreationDate() << std::endl;
 	}
 }
@@ -1017,7 +1025,8 @@ float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
 
 User DatabaseAccess::getTopTaggedUser()
 {
-	sqlite3_stmt* stmt = prepare("SELECT id, name FROM USERS ORDER BY (SELECT COUNT(*)"
+	sqlite3_stmt* stmt = prepare("SELECT id, name FROM USERS WHERE id IN (SELECT user_id FROM TAGS) "
+		"ORDER BY (SELECT COUNT(*)"
 		" FROM TAGS WHERE TAGS.user_id = USERS.id) DESC LIMIT 1;");
 	User user(-1, "");
 	if (!stmt)
