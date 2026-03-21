@@ -81,6 +81,8 @@ int main(void)
 		}
 	} 
 	while (true);
+
+	dataAccess.clear();
 }
 
 
