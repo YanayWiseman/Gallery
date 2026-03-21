@@ -14,6 +14,10 @@ DatabaseAccess::DatabaseAccess()
 	//  in oreder to execute queries on the database we need to open it
 	open();
 
+	//foreign keys are turned off by default in sqlite, this enables them
+	// which makes ON DELETE CASCADE work propertly
+	executeSqlQuery("PRAGMA foreign_keys = ON;");
+
 	// we need to create the tables
 	// users
 	executeSqlQuery("CREATE TABLE IF NOT EXISTS USERS ("
@@ -42,8 +46,8 @@ DatabaseAccess::DatabaseAccess()
 		" id INTEGER PRIMARY KEY AUTOINCREMENT,"
 		" picture_id INTEGER NOT NULL,"
 		" user_id INTEGER NOT NULL,"
-		" FOREIGN KEY(picture_id) REFERENCES PICTURES(id) ON DELETE CASCADE,,"
-		" FOREIGN KEY(user_id) REFERENCES USERS(id) ON DELETE CASCADE,,"
+		" FOREIGN KEY(picture_id) REFERENCES PICTURES(id) ON DELETE CASCADE,"
+		" FOREIGN KEY(user_id) REFERENCES USERS(id) ON DELETE CASCADE,"
 		" UNIQUE(picture_id, user_id)"  // one tag per user per picture
 		");");
 }
