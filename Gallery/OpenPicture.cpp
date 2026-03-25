@@ -57,7 +57,7 @@ void PictureProcessManager::staticHandler(int signum)
 void PictureProcessManager::closePictureProcess(int signum)
 {
 	// if paint or infraview is open and theres a proccess open we close it
-	if (pictureOpen && procInfo.hProcess != nullptr)
+	if (true || pictureOpen && procInfo.hProcess != nullptr)
 	{
 		std::cout << "Ctrl+C was typed when an image was open, closing it" << std::endl;
 
@@ -79,4 +79,70 @@ void PictureProcessManager::closePictureProcess(int signum)
 		std::cout << "Ctrl+C was typed when no image was open, existing the program" << std::endl;
 		exit(signum);
 	}
+}
+
+/*
+	Method to open a picture using an external application chosen by the user
+	input: the path of the picture
+	output: no return values
+*/
+
+void PictureProcessManager::openPicture(const std::string& path)
+{
+	std::cout << "Please choose one of the following applications to open the picture with: " << std::endl;
+	std::cout << "1. Paint" << std::endl << "2. InfraView" << std::endl;
+	int answer = 0;
+	std::cin >> answer;
+
+	if (answer != PAINT && answer != INFRAVIEW)
+	{
+		std::cout << "Invalid Choice!, returning to menu..." << std::endl;
+		return;
+	}
+
+	// now we can open the picture
+	switch (answer)
+	{
+		case PAINT:
+		{
+			if (!openPaint(path))
+			{
+				return;
+			}
+			break;
+		}
+		case INFRAVIEW:
+		{
+			if (!openInfraView(path))
+			{
+				return;
+			}
+			break;
+		}
+	}
+
+	std::string temp = (answer == PAINT) ? "Paint!" : "InfraView!";
+	std::cout << "Picture Opened Using " << temp << std::endl;
+}
+
+/*
+	Helper Method used to open a picture with Paint and keep our program encapsulated
+	input: the path to the picture
+	output: true if succeeded and false otherwise
+*/
+
+bool PictureProcessManager::openPaint(const std::string& path)
+{
+	return true;
+}
+
+/*
+	Helper Method used to open a picture with InfraView and keep our program encapsulated
+	input: the path to the picture
+	output: true if succeeded and false otherwise
+*/
+
+bool PictureProcessManager::openInfraView(const std::string& path)
+{
+	return true;
 }

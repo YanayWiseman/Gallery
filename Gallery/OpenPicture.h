@@ -4,6 +4,9 @@
 #include <iostream>
 #include <string>
 
+#define PAINT 1
+#define INFRAVIEW 2
+
 class PictureProcessManager
 {
 private:
@@ -18,6 +21,11 @@ private:
 	// static pointer to keep the adress of the active instance
 	static PictureProcessManager* instance;
 
+	// private methods to open the picture using an external application
+	// we use helper to keep our code encaplsulated and private
+	bool openPaint(const std::string& path);
+	bool openInfraView(const std::string& path);
+
 public:
 	// methods
 
@@ -27,8 +35,8 @@ public:
 
 	static void staticHandler(int signum);
 	void closePictureProcess(int signum);
-
 	void openPicture(const std::string& path);
+
 };
 
 
