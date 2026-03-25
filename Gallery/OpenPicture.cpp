@@ -9,7 +9,7 @@ PictureProcessManager* PictureProcessManager::instance = nullptr;
 */
 
 PictureProcessManager::PictureProcessManager() :
-	pictureOpen(false), procInfo({0})
+	_pictureOpen(false), _procInfo({0})
 {
 	instance = this;
 	std::signal(SIGINT, PictureProcessManager::staticHandler);
@@ -24,13 +24,13 @@ PictureProcessManager::PictureProcessManager() :
 PictureProcessManager::~PictureProcessManager()
 {
 	// close  all handles
-	if(procInfo.hProcess)
+	if(this->_procInfo.hProcess)
 	{
-		CloseHandle(procInfo.hProcess);
+		CloseHandle(this->_procInfo.hProcess);
 	}
-	if (procInfo.hThread)
+	if (this->_procInfo.hThread)
 	{
-		CloseHandle(procInfo.hThread);
+		CloseHandle(this->_procInfo.hThread);
 	}
 }
 
@@ -56,18 +56,18 @@ void PictureProcessManager::staticHandler(int signum)
 
 void PictureProcessManager::closePictureProcess(int signum)
 {
-	// if paint or infraview is open and theres a proccess open we close it
-	if (true || pictureOpen && procInfo.hProcess != nullptr)
+	// if paint or irfananview is open and theres a proccess open we close it
+	if (this->_pictureOpen && this->_procInfo.hProcess != nullptr)
 	{
 		std::cout << "Ctrl+C was typed when an image was open, closing it" << std::endl;
 
 		// terminate the proccess and close its handles
-		TerminateProcess(procInfo.hProcess, 0);
-		CloseHandle(procInfo.hProcess);
-		CloseHandle(procInfo.hThread);
+		TerminateProcess(this->_procInfo.hProcess, 0);
+		CloseHandle(this->_procInfo.hProcess);
+		CloseHandle(this->_procInfo.hThread);
 
-		procInfo = { 0 };
-		pictureOpen = false;
+		this->_procInfo = { 0 };
+		this->_pictureOpen = false;
 
 		// the signal function 'loads' only once every call, so we call it every time we need to
 		// get ready for the next interrupt
@@ -90,7 +90,7 @@ void PictureProcessManager::closePictureProcess(int signum)
 void PictureProcessManager::openPicture(const std::string& path)
 {
 	std::cout << "Please choose one of the following applications to open the picture with: " << std::endl;
-	std::cout << "1. Paint" << std::endl << "2. InfraView" << std::endl;
+	std::cout << "1. Paint" << std::endl << "2. IrfanView" << std::endl;
 	std::string input;
 	std::getline(std::cin, input);
 
@@ -101,12 +101,15 @@ void PictureProcessManager::openPicture(const std::string& path)
 	}
 	int answer = atoi(input.c_str());
 
+	std::string cmdLine;
+
 	// now we can open the picture
 	switch (answer)
 	{
 		case PAINT:
 		{
-			if (!openPaint(path))
+			cmdLine = "mspaint " + path;
+			if (!openExternalApplication(cmdLine))
 			{
 				return;
 			}
@@ -114,36 +117,51 @@ void PictureProcessManager::openPicture(const std::string& path)
 		}
 		case INFRAVIEW:
 		{
-			if (!openInfraView(path))
+			cmdLine = "i_view64.exe " + path;
+			if (!openExternalApplication(cmdLine))
 			{
 				return;
 			}
 			break;
 		}
 	}
-
-	std::string temp = (answer == PAINT) ? "Paint!" : "InfraView!";
+	this->_pictureOpen = true;
+	std::string temp = (answer == PAINT) ? "Paint!" : "IrfanView!";
 	std::cout << "Picture Opened Using " << temp << std::endl;
 }
 
 /*
-	Helper Method used to open a picture with Paint and keep our program encapsulated
+	Helper Method used to open a picture with an external application and keep our program encapsulated
 	input: the path to the picture
 	output: true if succeeded and false otherwise
 */
 
-bool PictureProcessManager::openPaint(const std::string& path)
+bool PictureProcessManager::openExternalApplication(const std::string& cmdLine)
 {
-	return true;
-}
+	// in order to start a process we need to use the STARTUPINFO struct
+	// (we already did it in archi)
+	// the only field that matters is the size of the strucure
+	STARTUPINFO startUpInfo = { sizeof(startUpInfo) };
 
-/*
-	Helper Method used to open a picture with InfraView and keep our program encapsulated
-	input: the path to the picture
-	output: true if succeeded and false otherwise
-*/
-
-bool PictureProcessManager::openInfraView(const std::string& path)
-{
-	return true;
+	// now we need to create the proccess
+	// everything that is either NULL, 0  or FALSE doesnt matter to us
+	if(CreateProcessA(NULL,
+		(LPSTR)cmdLine.c_str(), // this is what will be typed in the cmd as parameters to main to the paint program
+		NULL,
+		NULL,
+		FALSE,
+		0,
+		NULL,
+		NULL,
+		&startUpInfo, // A pointer to a STARTUPINFO structure. (from the MSDN)
+		&(this->_procInfo)))  // A pointer to a PROCESS_INFORMATION structure that receives identification information about the new process. (FROM MSDN)
+	{
+		return true;
+	}
+	else
+	{
+		DWORD error = GetLastError();
+		std::cout << "Error: " << error << std::endl;
+		return false;
+	}
 }
