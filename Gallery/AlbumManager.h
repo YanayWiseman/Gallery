@@ -4,6 +4,11 @@
 #include "MemoryAccess.h"
 #include "Album.h"
 
+#include "OpenPicture.h"
+
+// instead of creating the object here and having linker errors
+// we only announce it using extern
+extern PictureProcessManager picProcManager;
 
 class AlbumManager
 {
