@@ -42,6 +42,8 @@ PictureProcessManager::~PictureProcessManager()
 
 void PictureProcessManager::staticHandler(int signum)
 {
+	// signal() gets only a staic function, to connect it to the class, we need to use a connector
+	// that connector us the instance
 	if (instance)
 	{
 		instance->closePictureProcess(signum);
@@ -104,28 +106,24 @@ void PictureProcessManager::openPicture(const std::string& path)
 	std::string cmdLine;
 
 	// now we can open the picture
-	switch (answer)
+	if (answer == PAINT)
 	{
-		case PAINT:
-		{
-			cmdLine = "mspaint " + path;
-			if (!openExternalApplication(cmdLine))
-			{
-				return;
-			}
-			break;
-		}
-		case INFRAVIEW:
-		{
-			cmdLine = "i_view64.exe " + path;
-			if (!openExternalApplication(cmdLine))
-			{
-				return;
-			}
-			break;
-		}
+		cmdLine = "mspaint " + path;
 	}
+	else
+	{
+		cmdLine = "i_view64.exe " + path;
+	}
+
+	// open it
+	if (!openExternalApplication(cmdLine))
+	{
+		return;
+	}
+
 	this->_pictureOpen = true;
+	std::thread(&PictureProcessManager::monitorProcess, this, path).detach();
+
 	std::string temp = (answer == PAINT) ? "Paint!" : "IrfanView!";
 	std::cout << "Picture Opened Using " << temp << std::endl;
 }
@@ -164,4 +162,64 @@ bool PictureProcessManager::openExternalApplication(const std::string& cmdLine)
 		std::cout << "Error: " << error << std::endl;
 		return false;
 	}
+}
+
+/*
+	Method to get the last modification time using sys/stat and sys/types
+	input: the file's path'
+	output: the time as a string (return is by value because of the string stream that can rruin it)
+*/
+
+std::string PictureProcessManager::getLastModificationTime(const std::string& path) const
+{
+	// the stat structure contains alot of helpful information about a file
+	//  it is defined in sys/stat.h
+	// the stat() function fills it up with the useful information, we will be using the last modification time field
+	struct stat result;
+	if (stat(path.c_str(), &result) == 0)
+	{
+		// the field that contains the last modification time is st_mtime and is defined using the time_t type
+		// and it is why we included <ctime> too
+		std::time_t mod_time = result.st_mtime;
+
+		// now we want to convert to local time format and print
+		// std::localtime returns a pointer to a statically allocated std::tm struct
+		// std::put_time is to format a date from std::tm into a string
+		std::stringstream stringStream;
+		stringStream << std::put_time(std::localtime(&mod_time), "%Y-%m-%d %H:%M:%S");
+		return stringStream.str();
+	}
+	else
+	{
+		return "";
+	}
+}
+
+/*
+	Thread method to monitor the activity of the process and catch it when it terminates
+	input: the path of the file
+	output: no return values
+*/
+
+void PictureProcessManager::monitorProcess(const std::string& path)
+{
+	// check if edited
+	std::string beforeOpening = getLastModificationTime(path);
+	std::cout << "Please press Enter if the menu isn't loading." << std::endl;
+
+	WaitForSingleObject(this->_procInfo.hProcess, INFINITE);
+
+	std::string afterOpening = getLastModificationTime(path);
+	std::cout << "Please press Enter if the menu isn't loading." << std::endl;
+
+	if (beforeOpening != afterOpening)
+	{
+		std::cout << "The file was edited!!!!!\n" << "Please press Enter if the menu isn't loading." << std::endl;
+	}
+
+	CloseHandle(this->_procInfo.hProcess);
+	CloseHandle(this->_procInfo.hThread);
+
+	this->_procInfo = { 0 };
+	this->_pictureOpen = false;
 }

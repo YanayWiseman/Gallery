@@ -4,6 +4,14 @@
 #include <iostream>
 #include <string>
 
+#include <ctime>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <iomanip>
+#include <sstream>
+#include <thread>
+#include <atomic>
+
 #define PAINT 1
 #define INFRAVIEW 2
 
@@ -16,7 +24,7 @@ private:
 	// like the handles to the process and its thread and the process and thread id.
 	// we use it to track and terminate the picture's process
 	PROCESS_INFORMATION _procInfo;
-	bool _pictureOpen;
+	std::atomic<bool> _pictureOpen;  // i dont want to use mutexes
 
 	// static pointer to keep the adress of the active instance
 	static PictureProcessManager* instance;
@@ -25,6 +33,10 @@ private:
 	// we use helper to keep our code encaplsulated and private
 	bool openExternalApplication(const std::string& path);
 
+	std::string getLastModificationTime(const std::string& path) const;
+
+	// thread function
+	void monitorProcess(const std::string& path);
 public:
 	// methods
 
