@@ -54,12 +54,14 @@ void printSystemInfo()
 
 int main(void)
 {
+	PictureProcessManager picProcManager;
+
 	// the signal function is a function that detects interrupts in the program
 	// the SIGINT flag detects a signak that is sent to the program in order to end it
 	// closePictureProcess is a function that I have coded, that is called automatically when
 	// the interrupt is triggered, it gets the signal number (used in the exit function)
 	// in the function i can do what ever i want when CTRL+C is pressed, in this case, close the opened picture's proccess
-	signal(SIGINT, closePictureProcess);
+	signal(SIGINT, picProcManager.staticHandler);
 
 	// initialization data access
 	DatabaseAccess dataAccess;
