@@ -58,8 +58,10 @@ void Album::setCreationDateNow()
 
 Picture Album::getPicture(const std::string& pictureName) const
 {
-	for (auto& picture: m_pictures) {
-		if (pictureName == picture.getName()) {
+	for (auto& picture: m_pictures)
+	{
+		if (pictureName == picture.getName())
+		{
 			return picture;
 		}
 	}

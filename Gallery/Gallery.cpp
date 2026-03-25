@@ -1,16 +1,18 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <Windows.h>
+#include <csignal>
 #include "MemoryAccess.h"
 #include "AlbumManager.h"
 #include "DatabaseAccess.h"
-
+#include "OpenPicture.h"
 
 int getCommandNumberFromUser()
 {
 	std::string message("\nPlease enter any command(use number): ");
 	std::string numericStr("0123456789");
-	
+
 	std::cout << message << std::endl;
 	std::string input;
 	std::getline(std::cin, input);
@@ -52,6 +54,13 @@ void printSystemInfo()
 
 int main(void)
 {
+	// the signal function is a function that detects interrupts in the program
+	// the SIGINT flag detects a signak that is sent to the program in order to end it
+	// closePictureProcess is a function that I have coded, that is called automatically when
+	// the interrupt is triggered, it gets the signal number (used in the exit function)
+	// in the function i can do what ever i want when CTRL+C is pressed, in this case, close the opened picture's proccess
+	std::signal(SIGINT, PictureProcessManager::staticHandler);
+
 	// initialization data access
 	DatabaseAccess dataAccess;
 	dataAccess.open();
@@ -70,7 +79,7 @@ int main(void)
 	do
 	{
 		int commandNumber = getCommandNumberFromUser();
-		
+
 		try
 		{
 			albumManager.executeCommand(static_cast<CommandType>(commandNumber));
