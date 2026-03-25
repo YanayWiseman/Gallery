@@ -91,14 +91,15 @@ void PictureProcessManager::openPicture(const std::string& path)
 {
 	std::cout << "Please choose one of the following applications to open the picture with: " << std::endl;
 	std::cout << "1. Paint" << std::endl << "2. InfraView" << std::endl;
-	int answer = 0;
-	std::cin >> answer;
+	std::string input;
+	std::getline(std::cin, input);
 
-	if (answer != PAINT && answer != INFRAVIEW)
+	if (input != "1" && input != "2")
 	{
 		std::cout << "Invalid Choice!, returning to menu..." << std::endl;
 		return;
 	}
+	int answer = atoi(input.c_str());
 
 	// now we can open the picture
 	switch (answer)
