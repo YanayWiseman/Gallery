@@ -7,6 +7,8 @@
 #include "AlbumManager.h"
 #include "DatabaseAccess.h"
 #include "OpenPicture.h"
+#include "GalleryGUI.h"
+
 
 int getCommandNumberFromUser()
 {
@@ -34,23 +36,7 @@ int getCommandNumberFromUser()
 	return std::atoi(input.c_str());
 }
 
-/*
-	function to print the system's information suck as main developer and current time and hour
-	input: no input values
-	output: no return values
-*/
 
-void printSystemInfo()
-{
-	std::cout << "Chief Developer: Yanay Wiseman\nCurrent date:" << std::endl;
-
-	time_t now = time(nullptr);
-	std::stringstream oss;
-	oss << std::put_time(localtime(&now), "%d/%m/%Y %H:%M:%S");
-	std::cout << oss.str() << std::endl;
-
-	std::cout << "=========================\n" << std::endl;
-}
 
 int main(void)
 {
@@ -65,31 +51,41 @@ int main(void)
 	DatabaseAccess dataAccess;
 	dataAccess.open();
 
-	// initialize album manager
-	AlbumManager albumManager(dataAccess);
-
-	std::string albumName;
 	std::cout << "Welcome to Gallery!" << std::endl;
 	std::cout << "\n=========================" << std::endl;
 
-	printSystemInfo();
+	std::cout << "Select launch mode:" << std::endl;
+	std::cout << "  1. CLI (command line)" << std::endl;
+	std::cout << "  2. GUI (graphic window)" << std::endl;
+	std::cout << "Choice: ";
 
-	std::cout << "Type " << HELP << " to a list of all supported commands" << std::endl;
-	
-	do
+	std::string modeInput;
+	std::getline(std::cin, modeInput);
+
+	int mode = 0;
+	try
 	{
-		int commandNumber = getCommandNumberFromUser();
+		mode = std::stoi(modeInput);
+	}
+	catch (...)
+	{
+		mode = 1;
+	}
 
-		try
-		{
-			albumManager.executeCommand(static_cast<CommandType>(commandNumber));
-		} 
-		catch (std::exception& e)
-		{	
-			std::cout << e.what() << std::endl;
-		}
-	} 
-	while (true);
+	std::unique_ptr<IGalleryApp> app;
+
+	if (mode == 2)
+	{
+		std::cout << "Opening GUI..." << std::endl;
+		app = std::make_unique<GalleryGUI>(dataAccess);
+	}
+	else
+	{
+		std::cout << "Starting CLI..." << std::endl;
+		app = std::make_unique<AlbumManager>(dataAccess);
+	}
+
+	app->run();
 
 	dataAccess.clear();
 }

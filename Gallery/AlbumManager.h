@@ -3,20 +3,22 @@
 #include "Constants.h"
 #include "MemoryAccess.h"
 #include "Album.h"
-
+#include "IGalleryApp.h"
 #include "OpenPicture.h"
 
 // instead of creating the object here and having linker errors
 // we only announce it using extern
 extern PictureProcessManager picProcManager;
 
-class AlbumManager
+class AlbumManager : public IGalleryApp
 {
 public:
 	AlbumManager(IDataAccess& dataAccess);
+	void run() override;
 
 	void executeCommand(CommandType command);
 	void printHelp() const;
+	static int getCommandNumberFromUser();
 
 	using handler_func_t = void (AlbumManager::*)(void);    
 
