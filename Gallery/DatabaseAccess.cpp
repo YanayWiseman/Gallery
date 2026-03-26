@@ -285,7 +285,25 @@ void DatabaseAccess::untagUserInPicture(const std::string& albumName, const std:
 */
 
 void DatabaseAccess::createUser(User& user)
-{
+{    
+	// albumManager always starts m_nextUserId at 200, so on a second run
+	// it links with users already in the database so we query the actual max id
+	// and take the higher, then update the user object to match
+	int safeId = user.getId();
+
+	sqlite3_stmt* maxStmt = prepare("SELECT COALESCE(MAX(id), 0) FROM USERS;");
+	if (maxStmt && sqlite3_step(maxStmt) == SQLITE_ROW)
+	{
+		int maxExisting = sqlite3_column_int(maxStmt, 0);
+		if (maxExisting >= safeId)
+		{
+			safeId = maxExisting + 1;
+		}
+		sqlite3_finalize(maxStmt);
+	}
+
+	user.setId(safeId);  // keep albumManager's m_nextUserId in sync
+
 	// we need to create an insert statement that creates a user into users with
 	// the given user's name and id even though id might be autoincremented
 	std::string addUser = "INSERT INTO USERS (id, name) VALUES (" + std::to_string(user.getId()) + ", '" + user.getName() + "');";
@@ -739,9 +757,23 @@ void DatabaseAccess::printAlbums()
 
 void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const Picture& picture)
 {
+	// same fix as createUser() find the real max picture id in the database
+	int safeId = picture.getId();
+
+	sqlite3_stmt* maxStmt = prepare("SELECT COALESCE(MAX(id), 0) FROM PICTURES;");
+	if (maxStmt && sqlite3_step(maxStmt) == SQLITE_ROW)
+	{
+		int maxExisting = sqlite3_column_int(maxStmt, 0);
+		if (maxExisting >= safeId)
+		{
+			safeId = maxExisting + 1;
+		}
+		sqlite3_finalize(maxStmt);
+	}
+
 	// we need an insert statement
-	sqlite3_stmt* stmt = prepare("INSERT INTO PICTURES (name, location, creation_date, album_id)"
-		"VALUES  (?, ?, ?, (SELECT id FROM ALBUMS WHERE name = ?));");
+	sqlite3_stmt* stmt = prepare("INSERT INTO PICTURES (id, name, location, creation_date, album_id) "
+		"VALUES (?, ?, ?, ?, (SELECT id FROM ALBUMS WHERE name = ?));");
 	if (!stmt)
 	{
 		std::cout << "Failed" << std::endl;
@@ -749,10 +781,11 @@ void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const
 	}
 
 	// bind all of the values caarefully
-	sqlite3_bind_text(stmt, 1, picture.getName().c_str(), -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 2, picture.getPath().c_str(), -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 3, picture.getCreationDate().c_str(), -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 4, albumName.c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_int(stmt, 1, safeId);
+	sqlite3_bind_text(stmt, 2, picture.getName().c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 3, picture.getPath().c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 4, picture.getCreationDate().c_str(), -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 5, albumName.c_str(), -1, SQLITE_TRANSIENT);
 
 	// check if it returned  something else then DONE (success)
 	if (sqlite3_step(stmt) != SQLITE_DONE)
@@ -760,7 +793,6 @@ void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const
 		std::cout << "picture adding failed: " << sqlite3_errmsg(this->m_db) << std::endl;
 	}
 	sqlite3_finalize(stmt);
-
 }
 
 /*

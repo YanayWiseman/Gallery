@@ -4,6 +4,8 @@
 #include "MyException.h"
 #include "AlbumNotOpenException.h"
 
+// here the only instance of picProcManager
+PictureProcessManager picProcManager;
 
 AlbumManager::AlbumManager(IDataAccess& dataAccess) :
     m_dataAccess(dataAccess), m_nextPictureId(100), m_nextUserId(200)
@@ -223,10 +225,9 @@ void AlbumManager::showPicture()
 		throw MyException("Error: Can't open <" + picName+ "> since it doesnt exist on disk.\n");
 	}
 
-	// Bad practice!!!
-	// Can lead to privileges escalation
-	// You will replace it on WinApi Lab(bonus)
-	system(pic.getPath().c_str()); 
+	std::string path = pic.getPath().c_str(); 
+
+	picProcManager.openPicture(path);
 }
 
 void AlbumManager::tagUserInPicture()
@@ -427,7 +428,7 @@ std::string AlbumManager::getInputFromConsole(const std::string& message)
 
 bool AlbumManager::fileExistsOnDisk(const std::string& filename)
 {
-	struct stat buffer;   
+	struct stat buffer;
 	return (stat(filename.c_str(), &buffer) == 0); 
 }
 
