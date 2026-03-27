@@ -1255,14 +1255,153 @@ LRESULT CALLBACK GalleryGUI::mainWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LP
 		}
 		case WM_COMMAND:
 		{
+			//WM_COMMAND is called when a button gets clicked
+			if (!self)
+			{
+				return 0;
+			}
+
+			switch (LOWORD(wParam))
+			{
+				// album buttons   
+				case ID_BTN_CREATE_ALBUM:
+				{
+					self->onCreateAlbum();
+					break;
+				}
+				case ID_BTN_OPEN_ALBUM:
+				{
+					self->onOpenAlbum();
+					break;
+				}
+				case ID_BTN_CLOSE_ALBUM:
+				{
+					self->onCloseAlbum();
+					break;
+				}
+				case ID_BTN_DELETE_ALBUM:
+				{
+					self->onDeleteAlbum();
+					break;
+				}
+				case ID_BTN_LIST_ALBUMS:
+				{
+					self->onListAlbums();
+					break;
+				}
+				case ID_BTN_ALBUMS_OF_USER:
+				{
+					self->onListAlbumsOfUser();
+					break;
+				}
+
+				// picture buttons   
+				case ID_BTN_ADD_PICTURE:
+				{
+					self->onAddPicture();
+					break;
+				}
+				case ID_BTN_REMOVE_PICTURE:
+				{
+					self->onRemovePicture();
+					break;
+				}
+				case ID_BTN_LIST_PICTURES:
+				{
+					self->onListPictures();
+					break;
+				}
+				case ID_BTN_TAG_USER:
+				{
+					self->onTagUser();
+					break;
+				}
+				case ID_BTN_UNTAG_USER:
+				{
+					self->onUntagUser();
+					break;
+				}
+				case ID_BTN_LIST_TAGS:
+				{
+					self->onListTags();
+					break;
+				}
+
+				// user buttons   
+				case ID_BTN_ADD_USER:
+				{
+					self->onAddUser();
+					break;
+				}
+				case ID_BTN_REMOVE_USER:
+				{
+					self->onRemoveUser();
+					break;
+				}
+				case ID_BTN_LIST_USERS:
+				{
+					self->onListUsers();
+					break;
+				}
+				case ID_BTN_USER_STATS:
+				{
+					self->onUserStats();
+					break;
+				}
+
+				// query buttons   
+				case ID_BTN_TOP_TAGGED_USER:
+				{
+					self->onTopTaggedUser();
+					break;
+				}
+				case ID_BTN_TOP_TAGGED_PIC:
+				{
+					self->onTopTaggedPicture();
+					break;
+				}
+				case ID_BTN_TAGGED_PICS:
+				{
+					self->onTaggedPicturesOfUser();
+					break;
+				}
+
+				// utility   
+				case ID_BTN_CLEAR_OUTPUT:
+				{
+					self->clearOutput();
+					break;
+				}
+			}
+
 			return 0;
 		}
 		case WM_SIZE:
-		{
+		{		
+			// when the window is resized, resize the output area
+			// also we need to fill the new space correctly
+			if (!self || !self->m_textBoxDialog)
+			{
+				return 0;
+			}
+
+			int newWidth = LOWORD(lParam);   // new client width
+			int newHeight = HIWORD(lParam);   // new client height
+
+			// resize the window (parameters are similer to when we created it)
+			SetWindowPos(self->m_textBoxDialog, nullptr,
+				PANEL_W + 10, 10,
+				newWidth - PANEL_W - 25,
+				newHeight - 70,
+				SWP_NOZORDER);
+
 			return 0;
 		}
 		case WM_DESTROY:
-		{
+		{		
+			// WM_DESTROY is sent just before the window is destroyed
+			// PostQuitMessage causes GetMessage in run() to return 0, ending the loop
+			PostQuitMessage(0);
 			return 0;
 		}
 	}
@@ -1279,5 +1418,99 @@ LRESULT CALLBACK GalleryGUI::mainWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LP
 
 LRESULT CALLBACK GalleryGUI::inputDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	switch (uMsg)
+	{
+		case WM_CREATE:
+		{
+			// just like WM_CREATE in the main window's callback function
+			CREATESTRUCTA* createStruct = reinterpret_cast<CREATESTRUCTA*>(lParam);
+			const char* prompt = reinterpret_cast<const char*>(createStruct->lpCreateParams);
+			HINSTANCE instanceHandle = createStruct->hInstance;
 
+			// here we create the window basically
+			// i will not document because I have documented CreateWindowExA ltos of times in the code above
+			// prompt the label
+			CreateWindowExA(0, "STATIC", prompt ? prompt : "",
+				WS_CHILD | WS_VISIBLE | SS_LEFT,
+				10, 10, 290, 20,
+				hwnd, nullptr, instanceHandle, nullptr);
+
+			// text input field
+			CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+				WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
+				10, 36, 290, 24,
+				hwnd, (HMENU)ID_INPUT_EDIT, instanceHandle, nullptr);
+
+			// ok button, pressing Enter while the edit box is focused also triggers this
+			CreateWindowExA(0, "BUTTON", "OK",
+				WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+				60, 70, 80, 28,
+				hwnd, (HMENU)ID_INPUT_OK, instanceHandle, nullptr);
+
+			// cancel button
+			CreateWindowExA(0, "BUTTON", "Cancel",
+				WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+				170, 70, 80, 28,
+				hwnd, (HMENU)ID_INPUT_CANCEL, instanceHandle, nullptr);
+
+			// set focus to the edit field so the user can type immediately
+			SetFocus(GetDlgItem(hwnd, ID_INPUT_EDIT));
+
+			return 0;
+		}
+
+		case WM_COMMAND:
+		{
+			//only two cases
+			switch (LOWORD(wParam))
+			{
+				case ID_INPUT_OK:
+				{
+					// read the text from the edit control into inputResult
+					char buffer[512] = {};
+
+					// this functions returns the input into a buffer
+					GetDlgItemTextA(hwnd, ID_INPUT_EDIT, buffer, sizeof(buffer));
+					inputResult = buffer;
+					inputSubmitted = true;   // signal showInputDialog() loop to exit
+					DestroyWindow(hwnd);
+
+					return 0;
+				}
+				case ID_INPUT_CANCEL:
+				{
+					// empty result signals cancellation
+					inputResult = "";
+					inputSubmitted = true;
+					DestroyWindow(hwnd);
+
+					return 0;
+				}
+			}
+			break;
+		}
+
+		case WM_KEYDOWN:
+		{
+			// this is called for any other key that was pressed
+			// we handle only the escape key
+			if (wParam == VK_ESCAPE)
+			{
+				inputResult = "";
+				inputSubmitted = true;
+				DestroyWindow(hwnd);
+				return 0;
+			}
+			break;
+		}
+
+		case WM_DESTROY:
+		{
+			// x button
+			inputSubmitted = true;
+
+			return 0;
+		}
+	}
+	return DefWindowProcA(hwnd, uMsg, wParam, lParam);
 }

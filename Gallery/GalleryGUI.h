@@ -44,6 +44,11 @@
 // output text area   
 #define ID_OUTPUT_EDIT 2001
 
+// input dialog controls   
+#define ID_INPUT_EDIT 3001
+#define ID_INPUT_OK 3002
+#define ID_INPUT_CANCEL 3003
+
 // window layout constants
 #define WINDOW_H 790
 #define WINDOW_W 900
