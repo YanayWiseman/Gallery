@@ -54,6 +54,7 @@ int main(void)
 	std::cout << "Welcome to Gallery!" << std::endl;
 	std::cout << "\n=========================" << std::endl;
 
+	// let the user choose weather he wants CLI or GUI
 	std::cout << "Select launch mode:" << std::endl;
 	std::cout << "  1. CLI (command line)" << std::endl;
 	std::cout << "  2. GUI (graphic window)" << std::endl;
@@ -85,6 +86,8 @@ int main(void)
 		app = std::make_unique<AlbumManager>(dataAccess);
 	}
 
+	// for CLI, AlbumManager::run()
+	// for GUI, GalleryGUI::run()
 	app->run();
 
 	dataAccess.clear();
