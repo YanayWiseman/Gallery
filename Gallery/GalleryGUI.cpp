@@ -437,6 +437,26 @@ std::string GalleryGUI::showInputDialog(const std::string& prompt)
 }
 
 /*
+	Method to fetch the album from the database, it must be called before any
+	operation that reads from m_openAlbum
+	it is equivalent to ALbumManager::refreshOpenAlbum()
+	input: no input values
+	output: true if refreshed false  otherwise
+*/
+
+bool GalleryGUI::refreshOpenAlbum()
+{
+	if (!this->m_isAlbumOpen)
+	{
+		appendOutput("Error: no album is open currently!");
+		return false;
+	}
+
+	this->m_openAlbum = this->m_dataAccess.openAlbum(this->m_currentAlbumName);
+	return true;
+}
+
+/*
 	Callback function, this is the most important method of the classs, this method is called by
 	winapi for every single event that occurs in the main window, including when it gets created and deleted
 	input: the parameters are similar for every callback function because its predetermined

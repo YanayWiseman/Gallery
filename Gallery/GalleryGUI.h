@@ -97,6 +97,10 @@ private:
 	// input dialog
 	std::string showInputDialog(const std::string& prompt);
 
+	// equivalent to AlbumManager::refreshOpenAlbum()
+	bool refreshOpenAlbum();
+
+
 public:
 	// c'tor
 	explicit GalleryGUI(IDataAccess& dataAccess);
