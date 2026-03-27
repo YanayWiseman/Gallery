@@ -38,6 +38,8 @@
 #define ID_BTN_TOP_TAGGED_PIC 1018
 #define ID_BTN_TAGGED_PICS 1019
 
+#define ID_BTN_CLEAR_OUTPUT 1020   // clears the right panel output area
+
 // output text area   
 #define ID_OUTPUT_EDIT 2001
 
@@ -45,6 +47,14 @@
 #define WINDOW_H 790
 #define WINDOW_W 900
 #define PANEL_W 230
+
+// button layout constants
+#define BTN_X 10 // left margin for buttons
+#define BTN_W 210  // button width
+#define BTN_H 28  // button height
+#define BTN_GAP 4  // vertical gap between buttons
+#define BTN_STEP (BTN_H + BTN_GAP) 
+
 
 class GalleryGUI : public IGalleryApp
 {
@@ -72,6 +82,7 @@ private:
 	bool registerWindowClasses();
 	void createControls();
 	void layoutButtons();
+	void setAlbumOpenState(bool isOpen);
 
 	// callback functions for the windows
 	// just like in sqlite, the callback function's declaration must look like the library wants

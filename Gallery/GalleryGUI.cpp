@@ -197,17 +197,115 @@ void GalleryGUI::createControls()
 }
 
 /*
-	Method to create all of the left panel controls
+	Method to create all of the left panel controls and groupe them by category
 	input; no input values
 	output: no return values
 */
 
 void GalleryGUI::layoutButtons()
 {
-	// TODO
+	HINSTANCE instanceHandle = GetModuleHandleA(nullptr);
+	int y = 8;   // current y position, we incremente it as we add controls
+
+	// the left panel has 3 parts, the label for the group of commands
+	// the buttons themselves, and the seperators so everytthing is nicely divided
+	// we create helper functions for them using lambda
+	// for the label:
+	auto addLabel = [&](const char* text)
+		{
+			// create the label window
+			// i have listed the parameters and documented using this function before
+			// so i will not repeat it here
+			CreateWindowExA(
+				0, "STATIC", text, WS_CHILD | WS_VISIBLE | SS_LEFT,  // ss_left aligns the text to the left
+				BTN_X, y, BTN_W, 18, this->m_mainWindow, nullptr, instanceHandle, nullptr
+			); 
+			y += 20;  // increment the y level for the next control
+		};
+
+	// for the button creation:
+	// it gets the button's text and id, and returns a handle to it
+	auto addButton = [&](const char* text, int id) -> HWND
+		{
+			HWND buttonHandle = CreateWindowExA(
+				0, "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,  // bs_pushbutton means its a pushable button
+				BTN_X, y, BTN_W, BTN_H, this->m_mainWindow, (HMENU)(UINT_PTR)id,
+				instanceHandle, nullptr
+			);
+			y += BTN_STEP;
+			return buttonHandle;
+		};
+	
+	// the horizontal dividers
+	auto addSeperator = [&]()
+		{
+			y += 4;
+			CreateWindowExA(
+				0, "STATIC", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ, // ss_etchedhorz used to draw a horizontal line, typically for separating sections in a user interface
+				BTN_X, y, BTN_W, 2, this->m_mainWindow, nullptr,
+				instanceHandle, nullptr
+			);
+			y += 8;
+		};
+
+	// now we can add all of the buttons, seperators and labels in order
+	// albums                                                             
+	addLabel("   Albums   ");
+	addButton("Create album", ID_BTN_CREATE_ALBUM);
+	addButton("Open album", ID_BTN_OPEN_ALBUM);
+	addButton("Close album", ID_BTN_CLOSE_ALBUM);
+	addButton("Delete album", ID_BTN_DELETE_ALBUM);
+	addButton("List all albums", ID_BTN_LIST_ALBUMS);
+	addButton("Albums of user", ID_BTN_ALBUMS_OF_USER);
+
+	addSeperator();
+
+	// pictures (require open album)                                      
+	addLabel("   Pictures (open album first)   ");
+	// store handles so we can enable/disable this group
+	this->m_pictureBtns[0] = addButton("Add picture", ID_BTN_ADD_PICTURE);
+	this->m_pictureBtns[1] = addButton("Remove picture", ID_BTN_REMOVE_PICTURE);
+	this->m_pictureBtns[2] = addButton("List pictures", ID_BTN_LIST_PICTURES);
+	this->m_pictureBtns[3] = addButton("Tag user", ID_BTN_TAG_USER);
+	this->m_pictureBtns[4] = addButton("Untag user", ID_BTN_UNTAG_USER);
+	this->m_pictureBtns[5] = addButton("List tags", ID_BTN_LIST_TAGS);
+
+	addSeperator();
+
+	// users                                                              
+	addLabel("   Users   ");
+	addButton("Add user", ID_BTN_ADD_USER);
+	addButton("Remove user", ID_BTN_REMOVE_USER);
+	addButton("List users", ID_BTN_LIST_USERS);
+	addButton("User statistics", ID_BTN_USER_STATS);
+
+	addSeperator();
+
+	// queries                                                            
+	addLabel("   Queries   ");
+	addButton("Top tagged user", ID_BTN_TOP_TAGGED_USER);
+	addButton("Top tagged picture", ID_BTN_TOP_TAGGED_PIC);
+	addButton("Pictures tagged by user", ID_BTN_TAGGED_PICS);
+
+	addSeperator();
+
+	// utility                                                            
+	addButton("Clear output", ID_BTN_CLEAR_OUTPUT);
+
+	// start with picture buttons disabled because no album is open yet
+	setAlbumOpenState(false);
 }
 
+/*
+	Method to enable or disable the picture's buttons
+	input: the mode to set to
+	output: no return values
+*/
 
+void GalleryGUI::setAlbumOpenState(bool isOpen)
+{
+
+}
 /*
 	Method to append a line to the right panel (the text box in the middle)
 	input; the text to append
