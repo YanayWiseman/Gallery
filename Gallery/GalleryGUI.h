@@ -90,6 +90,7 @@ private:
 	static LRESULT CALLBACK mainWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	static LRESULT CALLBACK inputDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+	// output helpers
 	void appendOutput(const std::string& text);   // append a line to the right panel
 
 public:

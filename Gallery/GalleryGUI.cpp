@@ -302,10 +302,18 @@ void GalleryGUI::layoutButtons()
 	output: no return values
 */
 
-void GalleryGUI::setAlbumOpenState(bool isOpen)
+void GalleryGUI::setAlbumOpenState(bool mode)
 {
+	this->m_isAlbumOpen = mode;
 
+	// the function EnableWindow(handle, TRUE or FALSE) greys out the button and ignores clicks
+	int i = 0;
+	for (i = 0; i < 6; i++)
+	{
+		EnableWindow(this->m_pictureBtns[i], mode ? TRUE : FALSE);
+	}
 }
+
 /*
 	Method to append a line to the right panel (the text box in the middle)
 	input; the text to append
@@ -314,7 +322,20 @@ void GalleryGUI::setAlbumOpenState(bool isOpen)
 
 void GalleryGUI::appendOutput(const std::string& text)
 {
-	//TODO
+	// retrieve the length of the specified window's title bar text 
+	int len = GetWindowTextLengthA(this->m_textBoxDialog);
+
+	// we are calling the callback function here
+	// send the specified message to the window
+	// EM_SETSEL means select a range of characters in aa control or to place the text cursor at a specific position
+	SendMessageA(this->m_textBoxDialog, EM_SETSEL, (WPARAM)len, (LPARAM)len);
+
+	// EM_REPLACESEL replaces the current selection (which is the end)
+	// with new text, this is the standard win api way to append
+	SendMessageA(this->m_textBoxDialog, EM_REPLACESEL, FALSE, (LPARAM)text.c_str());
+
+	// Scroll the edit box to the bottom so the latest output is visible
+	SendMessage(m_outputEdit, WM_VSCROLL, SB_BOTTOM, 0);
 }
 
 /*
