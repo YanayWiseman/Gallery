@@ -92,6 +92,10 @@ private:
 
 	// output helpers
 	void appendOutput(const std::string& text);   // append a line to the right panel
+	void clearOutput();
+
+	// input dialog
+	std::string showInputDialog(const std::string& prompt);
 
 public:
 	// c'tor

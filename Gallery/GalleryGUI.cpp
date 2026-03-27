@@ -8,6 +8,12 @@
 static const char* MAIN_WND_CLASS = "GalleryMainWindow";
 static const char* INPUT_DLG_CLASS = "GalleryInputDialog";
 
+// The callback function for the input dialog is a static function which means it cannot access
+// GalleryGUI's member variables, thats why we use a pair of globals to pass the
+// result back. only one input dialog can be open at a time, so this is safe.
+static std::string inputResult;
+static bool inputSubmitted;  // set to true when OK or Cancel is pressed
+
 /*
 	Constructor method to construct the GallertyGUI object
 	input: the data access (database)
@@ -334,8 +340,100 @@ void GalleryGUI::appendOutput(const std::string& text)
 	// with new text, this is the standard win api way to append
 	SendMessageA(this->m_textBoxDialog, EM_REPLACESEL, FALSE, (LPARAM)text.c_str());
 
-	// Scroll the edit box to the bottom so the latest output is visible
-	SendMessage(m_outputEdit, WM_VSCROLL, SB_BOTTOM, 0);
+	// scroll the edit box to the bottom so the latest output is visible
+	SendMessageA(this->m_textBoxDialog, WM_VSCROLL, SB_BOTTOM, 0);
+}
+
+/*
+	Method to clear the output from the textBox Dialog
+	input: no inpput values
+	output: no return values
+*/
+
+void GalleryGUI::clearOutput()
+{
+	// just set the window's text to a blank string
+	SetWindowTextA(this->m_mainWindow, "");
+}
+
+/*
+	Method to show a pop up window with a dialog, used when input needs to be entered
+	like user id, album name etc
+	input: the prompt to showcase in the dialog
+	output: the input entered by the user
+*/
+
+std::string GalleryGUI::showInputDialog(const std::string& prompt)
+{
+	inputResult = "";
+	inputSubmitted = false;
+
+	// disable the main window so the user must interact with the dialog first
+	EnableWindow(this->m_mainWindow, FALSE);
+
+	// now we can create th einput dialog window
+	// we pass the prompt string as the lParam of WM_CREATE so the dialog's
+	// callback fucntion can read it and set the static text label
+	HWND dialogWindow = CreateWindowExA(
+		WS_EX_DLGMODALFRAME,  // visual frame that looks like a dialog
+		INPUT_DLG_CLASS,  // the string name registered to the window's class
+		"Enter value",  // shown on the dialog
+		WS_POPUP | WS_CAPTION | WS_SYSMENU,   // popup with title bar and x button
+		0, 0,  // position
+		320, 130,   // height and width
+		this->m_mainWindow,   // parant window
+		nullptr, GetModuleHandleA(nullptr),   // instance handle
+		(LPVOID)prompt.c_str()   // prompt
+	);
+
+	// now we want to center the dialog relative to the main window
+	RECT mainRectangle;
+	GetWindowRect(this->m_mainWindow, &mainRectangle);   // this gets the proporsions of the main window
+	int dialogX = mainRectangle.left + (mainRectangle.right - mainRectangle.left - 320) / 2;
+	int dialogY = mainRectangle.top + (mainRectangle.bottom - mainRectangle.top - 130) / 2;
+
+	//  now we set it
+	// the last parameter is the window sizing and positioning flags
+	// swp_nosize means it stays the size we set it, ignoring the cy, cx parameters (we set them to 0 anyways)
+	// swp_nozorder retains the current Z order (ignores the hWndInsertAfter parameter)
+	SetWindowPos(dialogWindow, nullptr, dialogX, dialogY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+	
+	// show it
+	ShowWindow(dialogWindow, SW_SHOW);
+	UpdateWindow(dialogWindow);
+
+	// now the dialog window is displayed, we want to recieve output
+	// this loop waits until inputSubmitted becomes true
+	MSG msg;  // the message we recieve from the input
+	while (!inputSubmitted)
+	{
+		// PeekMessage with PM_REMOVE checks for messages without blocking
+		// we use this instead of GetMessage so we can check inputSubmitted inbetween messages
+		if (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT)
+			{
+				// repost so the outer message loop also sees it
+				PostQuitMessage((int)msg.wParam);
+				break;
+			}
+		}
+		// handle the message
+		TranslateMessage(&msg);
+		DispatchMessageA(&msg);
+	}
+
+	// destroy the dialog window if it still exists
+	if (IsWindow(dialogWindow))
+	{
+		DestroyWindow(dialogWindow);
+	}
+
+	// return focus to the main window
+	EnableWindow(this->m_mainWindow, TRUE);
+	SetForegroundWindow(this->m_mainWindow);  // brings the thread that created the specified window into the foreground and activates the window
+
+	return inputResult;
 }
 
 /*
