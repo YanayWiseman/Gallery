@@ -19,7 +19,7 @@ private:
 
 	// the windows
 	HWND m_mainWindow;
-	HWND m_textBox;
+	HWND m_textBoxDialog;
 
 	// picture buttons
 	HWND m_pictureBtns[6];
@@ -35,12 +35,15 @@ private:
 
 	// win api's window setup
 	bool registerWindowClasses();
+	void createControls();
 
 	// callback functions for the windows
 	// just like in sqlite, the callback function's declaration must look like the library wants
 	// this is the syntax for winapi
 	static LRESULT CALLBACK mainWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	static LRESULT CALLBACK inputDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+	void appendOutput(const std::string& text);   // append a line to the right panel
 
 public:
 	// c'tor

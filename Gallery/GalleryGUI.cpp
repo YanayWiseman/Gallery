@@ -141,11 +141,97 @@ bool GalleryGUI::registerWindowClasses()
 	return true;
 }
 
+/*
+	Method to create all of the controls, called from WM_CREATE
+	input: no input values
+	output: no return values
+*/
 
-LRESULT CALLBACK GalleryGUI::mainWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+void GalleryGUI::createControls()
 {
 
 }
+
+/*
+	Method to append a line to the right panel (the text box in the middle)
+	input; the text to append
+	output: no return values
+*/
+
+void GalleryGUI::appendOutput(const std::string& text)
+{
+
+}
+
+/*
+	Callback function, this is the most important method of the classs, this method is called by
+	winapi for every single event that occurs in the main window, including when it gets created and deleted
+	input: the parameters are similar for every callback function because its predetermined
+	hwnd is the handle to the window, uMsg is the message code, wParam is the first message's parameter
+	, lparam is the second message's parameter, both wParam and lParam are depended on uMsg
+	output: the response that the program returns to the window (int)
+*/
+
+LRESULT CALLBACK GalleryGUI::mainWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	// retrieve the GalleryGUI* stored in the window's user data (getWindowLongA() does that)
+	// on WM_CREATE this is not set yet, so we check for nullptr
+	GalleryGUI* self = reinterpret_cast<GalleryGUI*>(GetWindowLongA(hwnd, GWLP_USERDATA));  // GWLP_USERDATA returns the user data
+
+	// now we sort by the uMsg, there are 4 cases
+	// creation call, command call, resize, destroy
+	switch (uMsg)
+	{
+		case WM_CREATE:
+		{
+			// WM_CREATE happens when creating the window using CreateWindowExA()
+			// we create the buttons in createControls() (our method)
+			// but first, when WM_CREATE happens, it carries a CREATESTRUCT* in lparam
+			// we need to store it in GWLP_USERDATA for future calls in WM_COMMAND
+			// this is why why retrieve it before the switch case
+			// the types here are scatchy so we use reinterpret cast
+			CREATESTRUCTA* createStruct = reinterpret_cast<CREATESTRUCTA*>(lParam);
+
+			// lpCreateParams is additional data used to create the window
+			GalleryGUI* gui = reinterpret_cast<GalleryGUI*>(createStruct->lpCreateParams);
+			// this fucntion canges the attribute of the window
+			SetWindowLongA(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(gui));
+
+			// now we create all of the controls
+			gui->m_mainWindow = hwnd;
+			gui->createControls();
+
+			// welcome message in the output area
+			gui->appendOutput("Welcome to Gallery!\r\n");
+			gui->appendOutput("Select a command from the left panel.\r\n");
+			gui->appendOutput("                                        \r\n");
+
+			return 0;
+		}
+		case WM_COMMAND:
+		{
+			return 0;
+		}
+		case WM_SIZE:
+		{
+			return 0;
+		}
+		case WM_DESTROY:
+		{
+			return 0;
+		}
+	}
+	
+	// if the message is not one of the four (unlikely)
+	// theres a defualt callback function by winapi, we let them handle my problems
+	return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+/*
+	Callback function, for the text box dialog window, the input and output is the same as in mainWndProc()
+	please read mainWndProc's docstring
+*/
+
 LRESULT CALLBACK GalleryGUI::inputDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 
