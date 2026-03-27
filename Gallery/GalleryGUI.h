@@ -5,6 +5,7 @@
 #include "User.h"
 #include "Picture.h"
 #include <Windows.h>
+#include <sstream>
 #include <string>
 
 //CONTROL IDs                                                              

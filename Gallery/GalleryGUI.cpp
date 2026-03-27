@@ -721,6 +721,493 @@ void GalleryGUI::onListAlbumsOfUser()
 	appendOutput("                                        \r\n");
 }
 
+// PICTURES                                                                 
+
+/*
+	Method to add a picture to an album on the addPicture button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onAddPicture()
+{
+	if (!refreshOpenAlbum()) 
+	{
+		return;
+	}
+
+	std::string picName = showInputDialog("Enter picture name:");
+	if (picName.empty())
+	{
+		return;
+	}
+
+	if (this->m_openAlbum.doesPictureExists(picName))
+	{
+		appendOutput("Error: picture <" + picName + "> already exists in this album.\r\n");
+		return;
+	}
+
+	std::string picPath = showInputDialog("Enter picture path (e.g. pics\\photo.jpg):");
+	if (picPath.empty())
+	{
+		return;
+	}
+
+	// increment counter, DatabaseAccess::addPictureToAlbumByName will
+	// autocorrect the id if it collides with existing database rows
+	this->m_nextPictureId++;
+	Picture picture(this->m_nextPictureId, picName);
+	picture.setPath(picPath);
+
+	this->m_dataAccess.addPictureToAlbumByName(this->m_currentAlbumName, picture);
+	appendOutput("Picture [" + str(picture.getId()) + "] <" + picName
+		+ "> added to album [" + this->m_currentAlbumName + "].\r\n");
+}
+
+/*
+	Method to remove a picture to an album on the removePicture button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onRemovePicture()
+{
+	if (!refreshOpenAlbum())
+	{
+		return;
+	}
+
+	std::string picName = showInputDialog("Enter picture name:");
+	if (picName.empty())
+	{
+		return;
+	}
+
+	if (!this->m_openAlbum.doesPictureExists(picName))
+	{
+		appendOutput("Error: no picture <" + picName + "> in this album.\r\n");
+		return;
+	}
+
+	this->m_dataAccess.removePictureFromAlbumByName(this->m_currentAlbumName, picName);
+	appendOutput("Picture <" + picName + "> removed from [" + this->m_currentAlbumName + "].\r\n");
+}
+
+/*
+	Method to list the pictures of an album on the listPictures button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onListPictures()
+{
+	if (!refreshOpenAlbum())
+	{
+		return;
+	}
+
+	std::list<Picture> pics = this->m_openAlbum.getPictures();
+	appendOutput("    Pictures in [" + this->m_currentAlbumName + "]       \r\n");
+
+	if (pics.empty())
+	{
+		appendOutput("  (no pictures)\r\n");
+	}
+	else
+	{
+		for (const auto& pic : pics)
+		{
+			appendOutput("  [" + str(pic.getId()) + "] " + pic.getName()
+				+ "  path: " + pic.getPath()
+				+ "  tags: " + str(pic.getTagsCount())
+				+ "  date: " + pic.getCreationDate() + "\r\n");
+		}
+	}
+	appendOutput("                                        \r\n");
+}
+
+/*
+	Method to tag a user to an picture on the taguser button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onTagUser()
+{
+	if (!refreshOpenAlbum())
+	{
+		return;
+	}
+
+	std::string picName = showInputDialog("Enter picture name:");
+	if (picName.empty())
+	{
+		return;
+	}
+
+	if (!this->m_openAlbum.doesPictureExists(picName))
+	{
+		appendOutput("Error: no picture <" + picName + "> in this album.\r\n");
+		return;
+	}
+
+	std::string userIdStr = showInputDialog("Enter user id to tag:");
+	if (userIdStr.empty())
+	{
+		return;
+	}
+
+	int userId = 0;
+	try
+	{
+		userId = std::stoi(userIdStr);
+	}
+	catch (...) 
+	{
+		appendOutput("Error: invalid user id.\r\n");
+		return;
+	}
+
+	if (!m_dataAccess.doesUserExists(userId))
+	{
+		appendOutput("Error: no user with id @" + userIdStr + ".\r\n");
+		return;
+	}
+
+	this->m_dataAccess.tagUserInPicture(this->m_currentAlbumName, picName, userId);
+	appendOutput("User @" + userIdStr + " tagged in <" + picName + ">.\r\n");
+}
+
+/*
+	Method to untag a user from a picture on the UntagUser button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onUntagUser()
+{
+	if (!refreshOpenAlbum())
+	{
+		return;
+	}
+
+	std::string picName = showInputDialog("Enter picture name:");
+	if (picName.empty())
+	{
+		return;
+	}
+
+	if (!this->m_openAlbum.doesPictureExists(picName))
+	{
+		appendOutput("Error: no picture <" + picName + "> in this album.\r\n");
+		return;
+	}
+
+	std::string userIdStr = showInputDialog("Enter user id to untag:");
+	if (userIdStr.empty()) return;
+
+	int userId = 0;
+	try
+	{
+		userId = std::stoi(userIdStr);
+	}
+	catch (...)
+	{
+		appendOutput("Error: invalid user id.\r\n");
+		return;
+	}
+
+	if (!this->m_dataAccess.doesUserExists(userId))
+	{
+		appendOutput("Error: no user with id @" + userIdStr + ".\r\n");
+		return;
+	}
+
+	// check the user is actually tagged before trying to untag
+	Picture pic = this->m_openAlbum.getPicture(picName);
+	if (!pic.isUserTagged(userId))
+	{
+		appendOutput("Error: user @" + userIdStr + " is not tagged in <" + picName + ">.\r\n");
+		return;
+	}
+
+	this->m_dataAccess.untagUserInPicture(this->m_currentAlbumName, picName, userId);
+	appendOutput("User @" + userIdStr + " untagged from <" + picName + ">.\r\n");
+}
+
+/*
+	Method to list the tags on the listTags button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onListTags()
+{
+	if (!refreshOpenAlbum())
+	{
+		return;
+	}
+
+	std::string picName = showInputDialog("Enter picture name:");
+	if (picName.empty())
+	{
+		return;
+	}
+
+	if (!this->m_openAlbum.doesPictureExists(picName))
+	{
+		appendOutput("Error: no picture <" + picName + "> in this album.\r\n");
+		return;
+	}
+
+	Picture pic = this->m_openAlbum.getPicture(picName);
+	const std::set<int>& tags = pic.getUserTags();
+
+	appendOutput("    Tags in <" + picName + ">               \r\n");
+	if (tags.empty())
+	{
+		appendOutput("  (no tags)\r\n");
+	}
+	else
+	{
+		for (int userId : tags)
+		{
+			User user = this->m_dataAccess.getUser(userId);
+			appendOutput("  @" + str(userId) + " - " + user.getName() + "\r\n");
+		}
+	}
+	appendOutput("                                        \r\n");
+}
+
+// USERS                                                                    
+
+/*
+	Method to add a user on the AddUser button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onAddUser()
+{
+	std::string name = showInputDialog("Enter user name:");
+	if (name.empty())
+	{
+		return;
+	}
+
+	this->m_nextUserId++;
+	User user(this->m_nextUserId, name);
+	this->m_dataAccess.createUser(user);   // databaseAccess auto corrects id if needed
+	appendOutput("User @" + str(user.getId()) + " [" + name + "] created.\r\n");
+}
+
+/*
+	Method to remove a user on the removeUser button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onRemoveUser()
+{
+	std::string userIdStr = showInputDialog("Enter user id:");
+	if (userIdStr.empty())
+	{
+		return;
+	}
+
+	int userId = 0;
+	try
+	{
+		userId = std::stoi(userIdStr);
+	}
+	catch(...)
+	{
+		appendOutput("Error: invalid user id.\r\n");
+		return;
+	}
+
+	if (!this->m_dataAccess.doesUserExists(userId))
+	{
+		appendOutput("Error: no user with id @" + userIdStr + ".\r\n");
+		return;
+	}
+
+	// if the open album belongs to this user, close it first
+	if (this->m_isAlbumOpen && this->m_openAlbum.getOwnerId() == userId)
+	{
+		this->m_dataAccess.closeAlbum(this->m_openAlbum);
+		this->m_currentAlbumName = "";
+		setAlbumOpenState(false);
+	}
+
+	User user = this->m_dataAccess.getUser(userId);
+	this->m_dataAccess.deleteUser(user);
+	appendOutput("User @" + userIdStr + " deleted.\r\n");
+}
+
+/*
+	Method to list the users on the listUsers button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onListUsers()
+{
+	appendOutput("    Users                               \r\n");
+	appendOutput("  (users also printed to console window)\r\n");
+
+	this->m_dataAccess.printUsers();
+
+	appendOutput("  Check the console window for the full list.\r\n");
+	appendOutput("                                        \r\n");
+}
+
+/*
+	Method to showcase the user's statistics on the UserStats button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onUserStats()
+{
+	std::string userIdStr = showInputDialog("Enter user id:");
+	if (userIdStr.empty())
+	{
+		return;
+	}
+
+	int userId = 0;
+	try
+	{
+		userId = std::stoi(userIdStr);
+	}
+	catch (...)
+	{
+		appendOutput("Error: invalid user id.\r\n");
+		return;
+	}
+
+	if (!this->m_dataAccess.doesUserExists(userId))
+	{
+		appendOutput("Error: no user with id @" + userIdStr + ".\r\n");
+		return;
+	}
+
+	User user = this->m_dataAccess.getUser(userId);
+
+	appendOutput("    Stats for @" + userIdStr + " [" + user.getName() + "]   \r\n");
+	appendOutput("  Albums owned:    " + str(this->m_dataAccess.countAlbumsOwnedOfUser(user)) + "\r\n");
+	appendOutput("  Albums tagged:   " + str(this->m_dataAccess.countAlbumsTaggedOfUser(user)) + "\r\n");
+	appendOutput("  Total tags:      " + str(this->m_dataAccess.countTagsOfUser(user)) + "\r\n");
+
+	float avg = this->m_dataAccess.averageTagsPerAlbumOfUser(user);
+	std::ostringstream stringStream;
+	stringStream.precision(2);
+	stringStream << std::fixed << avg;
+	appendOutput("  Avg tags/album:  " + stringStream.str() + "\r\n");
+	appendOutput("                                        \r\n");
+}
+
+// QUERIES                                                                  
+
+/*
+	Method to get the top tagged user on the TopTaggedUser button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onTopTaggedUser()
+{
+	User user = this->m_dataAccess.getTopTaggedUser();
+
+	appendOutput("    Top tagged user                      \r\n");
+	if (user.getId() == -1)
+	{
+		appendOutput("  (no tags in the database yet)\r\n");
+	}
+	else
+	{
+		appendOutput("  @" + str(user.getId()) + " - " + user.getName()
+			+ "  (" + str(this->m_dataAccess.countTagsOfUser(user)) + " tags)\r\n");
+	}
+	appendOutput("                                        \r\n");
+}
+
+/*
+	Method to get the top tagged picture on the TopTaggedPicture button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onTopTaggedPicture()
+{
+	Picture pic = this->m_dataAccess.getTopTaggedPicture();
+
+	appendOutput("    Top tagged picture                   \r\n");
+	if (pic.getId() == -1)
+	{
+		appendOutput("  (no tags in the database yet)\r\n");
+	}
+	else
+	{
+		appendOutput("  [" + str(pic.getId()) + "] " + pic.getName()
+			+ "  path: " + pic.getPath()
+			+ "  tags: " + str(pic.getTagsCount()) + "\r\n");
+	}
+	appendOutput("                                        \r\n");
+}
+
+/*
+	Method to get the tagged pictures of a user on the taggedPicturesOfUser button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onTaggedPicturesOfUser()
+{
+	std::string userIdStr = showInputDialog("Enter user id:");
+	if (userIdStr.empty())
+	{
+		return;
+	}
+
+	int userId = 0;
+	try
+	{
+		userId = std::stoi(userIdStr);
+	}
+	catch (...)
+	{
+		appendOutput("Error: invalid user id.\r\n");
+		return;
+	}
+
+	if (!this->m_dataAccess.doesUserExists(userId))
+	{
+		appendOutput("Error: no user with id @" + userIdStr + ".\r\n");
+		return;
+	}
+
+	User user = this->m_dataAccess.getUser(userId);
+	std::list<Picture> pics = this->m_dataAccess.getTaggedPicturesOfUser(user);
+
+	appendOutput("    Pictures tagged by @" + userIdStr + "         \r\n");
+	if (pics.empty())
+	{
+		appendOutput("  (none)\r\n");
+	}
+	else
+	{
+		for (const auto& pic : pics)
+		{
+			appendOutput("  [" + str(pic.getId()) + "] " + pic.getName()
+				+ "  " + pic.getPath() + "\r\n");
+		}
+	}
+	appendOutput("                                        \r\n");
+}
+
 /*
 	Callback function, this is the most important method of the classs, this method is called by
 	winapi for every single event that occurs in the main window, including when it gets created and deleted
