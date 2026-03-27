@@ -404,7 +404,7 @@ std::string GalleryGUI::showInputDialog(const std::string& prompt)
 
 	// now the dialog window is displayed, we want to recieve output
 	// this loop waits until inputSubmitted becomes true
-	MSG msg;  // the message we recieve from the input
+	MSG msg = {};  // the message we recieve from the input
 	while (!inputSubmitted)
 	{
 		// PeekMessage with PM_REMOVE checks for messages without blocking
@@ -417,10 +417,10 @@ std::string GalleryGUI::showInputDialog(const std::string& prompt)
 				PostQuitMessage((int)msg.wParam);
 				break;
 			}
+			// handle the message
+			TranslateMessage(&msg);
+			DispatchMessageA(&msg);
 		}
-		// handle the message
-		TranslateMessage(&msg);
-		DispatchMessageA(&msg);
 	}
 
 	// destroy the dialog window if it still exists
@@ -748,7 +748,7 @@ void GalleryGUI::onAddPicture()
 		return;
 	}
 
-	std::string picPath = showInputDialog("Enter picture path (e.g. pics\\photo.jpg):");
+	std::string picPath = showInputDialog("Enter picture path:");
 	if (picPath.empty())
 	{
 		return;
@@ -1501,7 +1501,7 @@ LRESULT CALLBACK GalleryGUI::inputDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 				DestroyWindow(hwnd);
 				return 0;
 			}
-			break;
+			return 0;
 		}
 
 		case WM_DESTROY:
