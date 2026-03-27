@@ -149,8 +149,64 @@ bool GalleryGUI::registerWindowClasses()
 
 void GalleryGUI::createControls()
 {
+	HINSTANCE instanceHandle = GetModuleHandleA(nullptr);  // used in CreateWindowExA()
 
+	// now we create the text box dialog window inside of the main window
+	this->m_textBoxDialog = CreateWindowExA(
+		WS_EX_CLIENTEDGE,  // this is extended style, WS_EX_CLIENTEDGE makes the window have a border with a sunken edge
+		"EDIT",  // class name
+		"",  // window name
+		// the style here is very important
+		// ws_child says its a child window (in the main window), ws_visible means teh window is initialy visible,
+		// ws_vscroll and hscroll adds a vertical and horizontal scroll bars,
+		// ees_multiline is for a control that has lots of line  of text in it,
+		// es_readonly means we cant edit whats printed in it
+		// and es_autovscroll means it scrolls vertically automalically when the text is flooding
+		WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL
+		| ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
+		PANEL_W + 10,  // x value
+		10,  // y value
+		WINDOW_W - PANEL_W - 25, // width
+		WINDOW_H - 70,  //height
+		this->m_mainWindow,  // parant window
+		(HMENU)ID_OUTPUT_EDIT, // the id of the control
+		instanceHandle,
+		nullptr		
+	);
+
+	// set a monospace font so the output aligns nicely
+	HFONT fontHandle = CreateFontA(
+		14, 0, 0, 0, // height, width
+		FW_NORMAL,  //  weight of the dont, normal is 400
+		FALSE,  // no font
+		FALSE,  //no underline
+		FALSE,  //no strikeout font
+		ANSI_CHARSET,  // the character set, this font supports the Windows ANSI character set (from mdsn)
+		OUT_DEFAULT_PRECIS, //the output percision is default
+		CLIP_DEFAULT_PRECIS,  // teh clipping percision is default
+		DEFAULT_QUALITY, // the output's quality is default
+		FIXED_PITCH | FF_MODERN,  // pitch and family of the font, the pitch is FIXED and loooks modern
+		"Consolas"
+	);
+
+	// send the message to the window, wn_setfont is the type of message
+	SendMessageA(this->m_textBoxDialog, WM_SETFONT, (WPARAM)fontHandle, TRUE);
+
+	// left panel: all the command buttons                                
+	layoutButtons();
 }
+
+/*
+	Method to create all of the left panel controls
+	input; no input values
+	output: no return values
+*/
+
+void GalleryGUI::layoutButtons()
+{
+	// TODO
+}
+
 
 /*
 	Method to append a line to the right panel (the text box in the middle)
@@ -160,7 +216,7 @@ void GalleryGUI::createControls()
 
 void GalleryGUI::appendOutput(const std::string& text)
 {
-
+	//TODO
 }
 
 /*

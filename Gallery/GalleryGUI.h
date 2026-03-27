@@ -7,9 +7,44 @@
 #include <Windows.h>
 #include <string>
 
+//CONTROL IDs                                                              
+// every button, text box, and panel needs a unique id so that
+// the window procedure can identify who sent the WM_COMMAND message
+
+// album buttons   
+#define ID_BTN_CREATE_ALBUM 1001
+#define ID_BTN_OPEN_ALBUM 1002
+#define ID_BTN_CLOSE_ALBUM 1003
+#define ID_BTN_DELETE_ALBUM 1004
+#define ID_BTN_LIST_ALBUMS 1005
+#define ID_BTN_ALBUMS_OF_USER 1006
+
+// picture buttons (only enabled when an album is open)   
+#define ID_BTN_ADD_PICTURE 1007
+#define ID_BTN_REMOVE_PICTURE 1008
+#define ID_BTN_LIST_PICTURES 1009
+#define ID_BTN_TAG_USER 1010
+#define ID_BTN_UNTAG_USER 1011
+#define ID_BTN_LIST_TAGS 1012
+
+// user buttons   
+#define ID_BTN_ADD_USER 1013
+#define ID_BTN_REMOVE_USER 1014
+#define ID_BTN_LIST_USERS 1015
+#define ID_BTN_USER_STATS 1016
+
+// query buttons   
+#define ID_BTN_TOP_TAGGED_USER 1017
+#define ID_BTN_TOP_TAGGED_PIC 1018
+#define ID_BTN_TAGGED_PICS 1019
+
+// output text area   
+#define ID_OUTPUT_EDIT 2001
+
 // window layout constants
 #define WINDOW_H 790
 #define WINDOW_W 900
+#define PANEL_W 230
 
 class GalleryGUI : public IGalleryApp
 {
@@ -36,6 +71,7 @@ private:
 	// win api's window setup
 	bool registerWindowClasses();
 	void createControls();
+	void layoutButtons();
 
 	// callback functions for the windows
 	// just like in sqlite, the callback function's declaration must look like the library wants
