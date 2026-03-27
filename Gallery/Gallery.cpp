@@ -55,7 +55,7 @@ int main(void)
 	std::cout << "\n=========================" << std::endl;
 
 	// let the user choose weather he wants CLI or GUI
-	std::cout << "Select launch mode:" << std::endl;
+	std::cout << "Please run the program from an IDE and not just the executable to avoid database confusion\nSelect launch mode:" << std::endl;
 	std::cout << "  1. CLI (command line)" << std::endl;
 	std::cout << "  2. GUI (graphic window)" << std::endl;
 	std::cout << "Choice: ";
