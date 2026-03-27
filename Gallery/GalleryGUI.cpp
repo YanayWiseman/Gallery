@@ -457,6 +457,271 @@ bool GalleryGUI::refreshOpenAlbum()
 }
 
 /*
+	Method to help cast an int to a string with a more friendly function
+	input: the integer to cast
+	output: the int as a string
+*/
+
+std::string GalleryGUI::str(int n)
+{
+	return std::to_string(n);
+}
+
+// The following methods behave like AlbumManager
+
+// ALBUMS
+/*
+	Method to create an album on the CreateAlbum button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onCreateAlbum()
+{
+	// now we can use all of the GUI helpers we have created very easily!
+	// and ofcourse the DatabaseAccess methods from v1.0.2
+	std::string userIdStr = showInputDialog("Enter owner user id:");
+	if (userIdStr.empty()) 
+	{
+		return;
+	}
+
+	int userId = 0;
+	try
+	{
+		userId = std::stoi(userIdStr);
+	}
+	catch (...)
+	{
+		appendOutput("Error: invalid user id.\r\n");
+		return;
+	}
+
+	if (!this->m_dataAccess.doesUserExists(userId))
+	{
+		appendOutput("Error: no user with id @" + userIdStr + ".\r\n");
+		return;
+	}
+
+	std::string name = showInputDialog("Enter album name:");
+	if (name.empty()) 
+	{
+		return;
+	}
+
+	if (this->m_dataAccess.doesAlbumExists(name, userId))
+	{
+		appendOutput("Error: album [" + name + "] already exists for this user.\r\n");
+		return;
+	}
+
+	Album newAlbum(userId, name);
+	this->m_dataAccess.createAlbum(newAlbum);
+	appendOutput("Album [" + name + "] created by user@" + userIdStr + ".\r\n");
+}
+
+/*
+	Method to open an album on the OpenAlbum button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onOpenAlbum()
+{
+	// if an album is already open, close it first (same behaviour as AlbumManager)
+	if (this->m_isAlbumOpen)
+	{
+		this->m_dataAccess.closeAlbum(this->m_openAlbum);
+		setAlbumOpenState(false);
+		this->m_currentAlbumName = "";
+	}
+
+	std::string userIdStr = showInputDialog("Enter owner user id:");
+	if (userIdStr.empty()) 
+	{
+		return;
+	}
+
+	int userId = 0;
+	try 
+	{
+		userId = std::stoi(userIdStr);
+	}
+	catch (...)
+	{
+		appendOutput("Error: invalid user id.\r\n");
+		return;
+	}
+
+	if (!this->m_dataAccess.doesUserExists(userId))
+	{
+		appendOutput("Error: no user with id @" + userIdStr + ".\r\n");
+		return;
+	}
+
+	std::string name = showInputDialog("Enter album name:");
+	if (name.empty())
+	{
+		return;
+	}
+
+	if (!this->m_dataAccess.doesAlbumExists(name, userId))
+	{
+		appendOutput("Error: no album [" + name + "] for user@" + userIdStr + ".\r\n");
+		return;
+	}
+
+	this->m_openAlbum = this->m_dataAccess.openAlbum(name);
+	this->m_currentAlbumName = name;
+	setAlbumOpenState(true);
+	appendOutput("Album [" + name + "] opened successfully.\r\n");
+}
+
+/*
+	Method to close an album on the closeAlbum button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onCloseAlbum()
+{
+	if (!this->m_isAlbumOpen)
+	{
+		appendOutput("Error: no album is currently open.\r\n");
+		return;
+	}
+	this->m_dataAccess.closeAlbum(this->m_openAlbum);
+	appendOutput("Album [" + this->m_currentAlbumName + "] closed.\r\n");
+	this->m_currentAlbumName = "";
+	setAlbumOpenState(false);
+}
+
+/*
+	Method to delete an album on the deleteAlbum button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onDeleteAlbum()
+{
+	std::string userIdStr = showInputDialog("Enter owner user id:");
+	if (userIdStr.empty()) 
+	{
+		return;
+	}
+
+	int userId = 0;
+	try
+	{
+		userId = std::stoi(userIdStr);
+	}
+	catch (...)
+	{
+		appendOutput("Error: invalid user id.\r\n");
+		return;
+	}
+
+	if (!this->m_dataAccess.doesUserExists(userId))
+	{
+		appendOutput("Error: no user with id @" + userIdStr + ".\r\n");
+		return;
+	}
+
+	std::string name = showInputDialog("Enter album name:");
+	if (name.empty()) 
+	{
+		return;
+	}
+
+	if (!this->m_dataAccess.doesAlbumExists(name, userId))
+	{
+		appendOutput("Error: no album [" + name + "] for user@" + userIdStr + ".\r\n");
+		return;
+	}
+
+	// if the album being deleted is currently open, close it first
+	if (this->m_isAlbumOpen && this->m_currentAlbumName == name)
+	{
+		this->m_dataAccess.closeAlbum(this->m_openAlbum);
+		this->m_currentAlbumName = "";
+		setAlbumOpenState(false);
+	}
+
+	this->m_dataAccess.deleteAlbum(name, userId);
+	appendOutput("Album [" + name + "] deleted.\r\n");
+}
+
+/*
+	Method to list the albums on the listAlbums button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onListAlbums()
+{
+	// getAlbums returns the list so we format it ourselves (nicer than printAlbums)
+	std::list<Album> albums = this->m_dataAccess.getAlbums();
+
+	appendOutput("    All albums                          \r\n");
+	if (albums.empty())
+	{
+		appendOutput("  (no albums)\r\n");
+	}
+	else
+	{
+		for (const auto& album : albums)
+		{
+			appendOutput("  [" + album.getName() + "]"
+				+ "  owner@" + str(album.getOwnerId())
+				+ "  created: " + album.getCreationDate() + "\r\n");
+		}
+	}
+	appendOutput("                                        \r\n");
+}
+
+/*
+	Method to list album of user on the listAlbumsOfUser button click
+	input: no input values
+	output: no return values
+*/
+
+void GalleryGUI::onListAlbumsOfUser()
+{
+	std::string userIdStr = showInputDialog("Enter user id:");
+	if (userIdStr.empty()) 
+	{
+		return;
+	}
+
+	int userId = 0;
+	try
+	{
+		userId = std::stoi(userIdStr);
+	}
+	catch (...)
+	{
+		appendOutput("Error: invalid user id.\r\n");
+		return;
+	}
+
+	if (!this->m_dataAccess.doesUserExists(userId))
+	{
+		appendOutput("Error: no user with id @" + userIdStr + ".\r\n");
+		return;
+	}
+
+	User user = this->m_dataAccess.getUser(userId);
+	std::list<Album> albums = this->m_dataAccess.getAlbumsOfUser(user);
+
+	appendOutput("    Albums of user@" + userIdStr + "               \r\n");
+	for (const auto& album : albums)
+	{
+		appendOutput("  [" + album.getName() + "]  created: " + album.getCreationDate() + "\r\n");
+	}
+	appendOutput("                                        \r\n");
+}
+
+/*
 	Callback function, this is the most important method of the classs, this method is called by
 	winapi for every single event that occurs in the main window, including when it gets created and deleted
 	input: the parameters are similar for every callback function because its predetermined

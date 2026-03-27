@@ -100,6 +100,36 @@ private:
 	// equivalent to AlbumManager::refreshOpenAlbum()
 	bool refreshOpenAlbum();
 
+	// a string cast helper
+	std::string str(int n);
+
+	// command handlers
+	// albums                            
+	void onCreateAlbum();
+	void onOpenAlbum();
+	void onCloseAlbum();
+	void onDeleteAlbum();
+	void onListAlbums();
+	void onListAlbumsOfUser();
+
+	// pictures
+	void onAddPicture();
+	void onRemovePicture();
+	void onListPictures();
+	void onTagUser();
+	void onUntagUser();
+	void onListTags();
+
+	// users
+	void onAddUser();
+	void onRemoveUser();
+	void onListUsers();
+	void onUserStats();
+
+	// queries
+	void onTopTaggedUser();
+	void onTopTaggedPicture();
+	void onTaggedPicturesOfUser();
 
 public:
 	// c'tor
