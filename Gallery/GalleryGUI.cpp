@@ -4,6 +4,10 @@
 #include <string>
 #include <list>
 
+// each window class needs a string name registered to it
+static const char* MAIN_WND_CLASS = "GalleryMainWindow";
+static const char* INPUT_DLG_CLASS = "GalleryInputDialog";
+
 /*
 	Constructor method to construct the GallertyGUI object
 	input: the data access (database)
@@ -44,6 +48,49 @@ void GalleryGUI::run()
 		MessageBoxA(nullptr, "Failed registering the windows classes", "Error", MB_OK | MB_ICONERROR);
 		return;
 	}
+
+	// now we can actually create the main window
+
+	this->m_mainWindow = CreateWindowExA(
+		0,  // 0 means no extended styles (good ol fashioned window style)
+		MAIN_WND_CLASS,  // this is the window class's name
+		"Gallery",  // the title
+		WS_OVERLAPPEDWINDOW,  // the window is overlapped just like every other window we know of
+		CW_USEDEFAULT,  // x value, we can use default
+		CW_USEDEFAULT,  // y value
+		WINDOW_H,  // heigth
+		WINDOW_W,  // width
+		nullptr, nullptr,  // optional parameters
+		GetModuleHandleA(nullptr),  // handle to the instance of the module to be associated with the window (from the msdn)
+		this  // this is the most important parameter, this allows the callback function to connect to the window
+		);
+
+	// check if worked
+	if (!this->m_mainWindow)
+	{
+		MessageBoxA(nullptr, "Failed creating the main window", "Error", MB_OK | MB_ICONERROR);
+		return;
+	}
+
+	// show and paint the window
+	// it takes the handle to the window and the second parameter is the usual flag it takes
+	ShowWindow(this->m_mainWindow, SW_SHOWNORMAL);
+
+	// no need to explain what this is doing
+	UpdateWindow(this->m_mainWindow);
+
+	// now to the GUI's main loop
+	//get the message, translate it, and dispatch it (explanation in the loop)
+	MSG msg;  // MSG is the struct that GetMessage fills up
+	// GetMessage takes the message struct to fill, the rest are optional parameters
+	while (GetMessageA(&msg, nullptr, 0, 0))
+	{
+		// translates virtual-key messages into character message
+		TranslateMessage(&msg);
+
+		// DispatchMessage sends the message to the appropriate callback function!!!
+		DispatchMessageA(&msg);
+	}
 }
 
 /*
@@ -58,3 +105,12 @@ bool GalleryGUI::registerWindowClasses()
 
 }
 
+
+LRESULT CALLBACK GalleryGUI::mainWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+
+}
+LRESULT CALLBACK GalleryGUI::inputDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+
+}
