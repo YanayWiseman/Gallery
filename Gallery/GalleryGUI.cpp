@@ -15,7 +15,7 @@ static const char* INPUT_DLG_CLASS = "GalleryInputDialog";
 */
 
 GalleryGUI::GalleryGUI(IDataAccess& dataAccess)
-	: m_dataAccess(dataAccess), m_mainWindow(nullptr), m_textBox(nullptr)
+	: m_dataAccess(dataAccess), m_mainWindow(nullptr), m_textBoxDialog(nullptr)
 	, m_isAlbumOpen(false), m_nextUserId(200), m_nextPictureId(100)
 {
 	int i = 0;
@@ -102,7 +102,43 @@ void GalleryGUI::run()
 
 bool GalleryGUI::registerWindowClasses()
 {
+	// we want to create the main window class
+	WNDCLASSEXA mainW = {};  // first create it to avoid errors
 
+	// now fill
+	mainW.cbSize = sizeof(mainW);  // size of the struct
+	// CS_HREDRAW | CS_VREDRAW means it will redraw the window 
+	// if it is moved and dragged around the screen or resized
+	mainW.style = CS_HREDRAW | CS_VREDRAW;
+	mainW.lpfnWndProc = GalleryGUI::mainWndProc;  // a pointer to the window's procedure (callback function)
+	mainW.hInstance = GetModuleHandleA(nullptr);  // like in CreateWindowExA()
+	mainW.hCursor = LoadCursorA(nullptr, IDC_ARROW);  // handle to the class's curser (I have took LoadCursorA()'s parameters from msdn)
+	mainW.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);  // 1 must be added to the chosen color (gray), also we need to cast to HBRUSH (said in msdn)
+	mainW.lpszClassName = MAIN_WND_CLASS;  // the class's name
+
+	// now register!
+	if (!RegisterClassExA(&mainW))
+	{
+		// the function returns a false value if it fails
+		return false;
+	}
+	
+	// now we do the same for the textBox dialog's window
+	WNDCLASSEXA textBox = {};
+	textBox.cbSize = sizeof(textBox);
+	textBox.lpfnWndProc = GalleryGUI::inputDlgProc;
+	textBox.hInstance = GetModuleHandle(nullptr);
+	textBox.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	textBox.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
+	textBox.lpszClassName = INPUT_DLG_CLASS;
+
+	if (!RegisterClassExA(&textBox))
+	{
+		return false;
+	}
+
+	// it worked
+	return true;
 }
 
 
